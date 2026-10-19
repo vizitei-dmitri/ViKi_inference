@@ -36,6 +36,7 @@ from viki.perception.scene import (  # noqa: F401
     segment_episode,
 )
 from viki.perception.live import CausalLandmarkFilter, LiveCameraGeometry, LiveHandEstimator, load_live_geometry
+from viki.perception.live_hand_fit import CausalHandFitter
 
 __all__ = [
     "LM",
@@ -59,5 +60,6 @@ __all__ = [
     "LiveCameraGeometry",
     "LiveHandEstimator",
     "CausalLandmarkFilter",
+    "CausalHandFitter",
     "load_live_geometry",
 ]

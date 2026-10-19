@@ -202,6 +202,7 @@ class LiveHandEstimator:
         quality_power = cfg.LIVE_FILTER_QUALITY_POWER if quality_power is None else quality_power
         self._filter = CausalLandmarkFilter(min_cutoff_hz, beta, quality_power=quality_power)
         self.capture_raw, self._raw_points = bool(capture_raw), None
+        self._camera_observations, self._triangulation_details = None, None
         self.orientation_recovery = (cfg.LIVE_ORIENTATION_RECOVERY if orientation_recovery is None
                                      else bool(orientation_recovery))
         self._rotation_candidate = None
@@ -315,6 +316,8 @@ class LiveHandEstimator:
             orientation_valid=bool(orientation_valid), calibration_id=self.calibration_id,
             reason=reason, opening=opening, camera_timestamps=camera_timestamps or {},
             raw_points=(self._raw_points.copy() if self.capture_raw and self._raw_points is not None else None),
+            camera_observations=self._camera_observations if self.capture_raw else None,
+            triangulation_details=self._triangulation_details if self.capture_raw else None,
         )
 
     def process(self, group: SyncedFrameGroup) -> LiveHandEstimate | None:
@@ -336,6 +339,7 @@ class LiveHandEstimator:
         self._last_native, self._last_source_us = native, source_time
         points, observed, quality = np.full((21, 3), np.nan), np.zeros(21, bool), np.zeros(21)
         self._raw_points = points
+        self._camera_observations, self._triangulation_details = None, {}
         skew = max(int(f.host_timestamp_us) for f in group.frames.values()) - source_time
         if skew > self._max_skew_us:
             self._clear_tracking()
@@ -368,9 +372,18 @@ class LiveHandEstimator:
                            "depth_m": float("nan"), "depth_valid": False,
                            "depth_spread_m": float("nan")}
             observations[dev] = row
+        if self.capture_raw:
+            self._camera_observations = {dev: {
+                "P": self.geometry[dev].camera.P.copy(), "focal_px": self.geometry[dev].camera.f,
+                "uv": {int(lm): item["uv"].copy() for lm, item in row.items()},
+                "detector_score_is_landmark_confidence": False,
+            } for dev, row in observations.items()}
         for lm in self.landmarks:
             views = [row[lm] for row in observations.values() if lm in row]
             result = triangulate_joint(views, {d: c.camera for d, c in self.geometry.items()}, lm, self._tri)
+            if self.capture_raw and result is not None:
+                self._triangulation_details[int(lm)] = {k: result[k] for k in
+                    ("quality", "n_views", "n_candidate_views", "ray_deg", "reproj_px")}
             if result is not None and np.isfinite(result["xyz"]).all() and result["quality"] >= .1:
                 points[lm], quality[lm], observed[lm] = result["xyz"], result["quality"], True
         if int(self._clock_us()) - source_time > self._max_age_us:

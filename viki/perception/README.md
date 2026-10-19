@@ -24,6 +24,7 @@ is deferred to `viki.prepare`.
 | `observations.py` / `triangulate.py` | stored raw 2-D evidence + multi-camera triangulation with geometric/angular gates |
 | `profiles.py` / `run.py` | immutable named offline recipes and episode perception orchestration; current stable fused-hand recipe is V4 |
 | `live.py` | persistent MediaPipe VIDEO detectors → exact factory color rays → current-frame triangulation → causal XYZ/SO(3) filters; public `LiveHandEstimator` |
+| `live_hand_fit.py` | experimental public `CausalHandFitter`: causal prefix calibration, fixed palm/bones and bounded finger joints; current-frame landmarks only |
 
 ## Contract
 
@@ -47,6 +48,23 @@ landmark falls back to the centroid of the available palm landmarks with an
 identity rotation.
 
 ## Causal live estimation
+
+`CausalHandFitter(LiveHandFitOptions(...)).update(points, observed, quality,
+source_time_us, valid=...)` is an **experimental comparison API**, not enabled
+in `LiveSession`. The first ten complete valid frames calibrate the existing
+26-DoF CapsuleHand; subsequent frames optimize a wrist pose and bounded finger
+angles against available landmarks. Calibration stays frozen, including after
+tracking loss. Missing control support is rejected; inferred noncontrol points
+are explicitly marked and never relabelled as observations. `accepted` means
+geometry/correction gates pass; `converged` separately reports optimizer
+termination. A 20-evaluation budget can expire without convergence. The thumb
+and joint limits are model approximations, not validated human biomechanics.
+See [dataset experiment](../../docs/2026-10-19-causal-hand-dataset.md) before
+using this model to change control targets.
+
+`capture_raw=True` additionally retains current raw XYZ, ideal pinhole 2-D
+observations and triangulation diagnostics for paired experiments. These
+contain local calibration data; normal runtime leaves the evidence unset.
 
 `LiveHandEstimator.from_episode(reference_episode, landmark_mode="all21")`
 loads the reference's raw factory calibration, camera intrinsics/extrinsics

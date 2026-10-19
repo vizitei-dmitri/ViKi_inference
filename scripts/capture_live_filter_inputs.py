@@ -37,7 +37,8 @@ def main():
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=False)
     estimator = LiveHandEstimator.from_episode(args.reference, capture_raw=True,
-                                               min_cutoff_hz=2., beta=.5)
+                                               min_cutoff_hz=2., beta=.5,
+                                               quality_power=0., orientation_recovery=False)
     source = None
     count, valid = 0, 0
     try:
@@ -56,6 +57,7 @@ def main():
         manifest = {"scope": "recorded RGB-D -> causal raw geometry and baseline filter; no arm executor",
             "reference": str(args.reference), "perception": estimator.manifest,
             "source": source.source_summary, "samples": count, "valid_positions": valid,
+            "dropped_source_groups": source.dropped_groups, "source_exhausted": source.exhausted,
             "hand_sha256": hashlib.sha256((args.out/"hand.jsonl").read_bytes()).hexdigest()}
         (args.out/"manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
         print(json.dumps({"output": str(args.out), "samples": count, "valid_positions": valid}))

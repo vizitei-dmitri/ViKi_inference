@@ -182,6 +182,8 @@ class LiveHandEstimate:
     opening: float = float("nan")
     camera_timestamps: dict = field(default_factory=dict)
     raw_points: np.ndarray | None = None  # opt-in current-frame geometry for filter experiments
+    camera_observations: dict | None = None  # opt-in rectified 2-D evidence; local captures only
+    triangulation_details: dict | None = None
 
 
 @dataclass
@@ -196,6 +198,44 @@ class HumanTarget:
     position_valid: bool
     orientation_valid: bool
     calibration_id: str
+
+
+@dataclass(frozen=True)
+class LiveHandFitOptions:
+    """Experimental causal landmark-only articulated fit, not batch/cloud fit."""
+
+    warmup_frames: int = 10
+    quality_power: float = 0.0
+    max_nfev: int = 20
+    joint_prior: float = 1e-5
+    robust_scale_m: float = 0.008
+    correction_cap_m: float = 0.03
+
+    def validate(self):
+        if self.warmup_frames < 2 or self.max_nfev < 1:
+            raise ValueError("fit warmup>=2 and max_nfev>=1 required")
+        if not np.isfinite(self.quality_power) or not 0 <= self.quality_power <= 2:
+            raise ValueError("quality_power must be in [0, 2]")
+        for name in ("joint_prior", "robust_scale_m", "correction_cap_m"):
+            value = getattr(self, name)
+            if not np.isfinite(value) or value < 0 or (name != "joint_prior" and value == 0):
+                raise ValueError(f"invalid {name}")
+
+
+@dataclass
+class LiveHandFitEstimate:
+    source_time_us: int
+    points: np.ndarray
+    observed: np.ndarray
+    inferred: np.ndarray
+    accepted: bool
+    reason: str
+    q: np.ndarray
+    compute_ms: float
+    nfev: int
+    joint_margin_rad: float
+    max_correction_m: float
+    converged: bool = False
 
 
 @dataclass(frozen=True)
