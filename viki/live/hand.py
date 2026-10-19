@@ -8,6 +8,8 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 import signal
+import select
+import sys
 import threading
 import time
 import uuid
@@ -18,14 +20,14 @@ from viki.contracts import Episode
 from viki.cameras import CameraFrameSource, CameraManager, RecordedFrameSource
 from viki.perception import LiveHandEstimator
 from viki.retarget import DG5FHandRetargeter, DG5F_JOINT_NAMES
-from viki.replay import DG5FHandPreview
+from viki.replay import DG5FHandPreview, DG5FHandController
 from .session import _safe
 from .sources import start_reference_cameras, wait_reference_cameras
 
 
 class LiveFingerSession:
     def __init__(self, reference, *, source="recorded", hybrid_root="/opt/dg5f-hybrid",
-                 seconds=60., perception_hz=15., ttl_s=.25, filter_beta=30., out="data/live_hand_sessions"):
+                 seconds=60., perception_hz=15., ttl_s=.25, filter_beta=30., out="data/live_hand_sessions", controller=None):
         for value in (seconds,perception_hz,ttl_s,filter_beta):
             if not np.isfinite(value):
                 raise ValueError("hand settings must be finite")
@@ -34,6 +36,7 @@ class LiveFingerSession:
         self.reference,self.source = str(reference),source
         self.seconds,self.hz,self.ttl,self.beta = seconds,perception_hz,ttl_s,filter_beta
         self.hybrid_root = hybrid_root
+        self.controller = controller
         self.directory = Path(out)/uuid.uuid4().hex
         self.directory.mkdir(parents=True,exist_ok=False)
         self.stop_event = threading.Event()
@@ -56,6 +59,9 @@ class LiveFingerSession:
             estimator = LiveHandEstimator.from_episode(Episode(Path(self.reference)),landmark_mode="all21",
                 max_age_s=self.ttl,min_cutoff_hz=2.,beta=self.beta,quality_power=0.)
             self.report.update(retarget=retarget.manifest,perception=estimator.manifest)
+            if self.controller is not None:
+                self.report["executor"] = self.controller.manifest()
+                self.controller.start()
             if self.stop_event.is_set():
                 return
             if self.source == "recorded":
@@ -90,12 +96,21 @@ class LiveFingerSession:
                                 counts[target.reason] += 1
                             with self.lock:
                                 self.latest = target
+                            if self.controller is not None:
+                                self.controller.submit(target)
                     self.stop_event.wait(max(0.,1/self.hz-(time.monotonic()-begin)))
             self.report["reason"] = "source_exhausted" if source.exhausted else "stopped_or_duration_limit"
         except Exception as exc:
             if not (self.stop_event.is_set() and str(exc) == "operator_stop"):
                 self.report["error"] = f"{type(exc).__name__}: {exc}"
         finally:
+            if (self.controller is not None and self.controller.process is not None
+                    and self.controller.process.is_alive() and not self.controller.stop.is_set()):
+                try:
+                    self.controller.submit(None)
+                except Exception as exc:
+                    if not self.controller.stop.is_set():
+                        self.report["error"] = f"clear target: {exc}"
             for resource in (source,estimator):
                 if resource is not None:
                     try:
@@ -120,10 +135,30 @@ class LiveFingerSession:
 
 
 def run_hand_cli(args):
+    if args.backend == "tesollo" and (not args.execute or args.source != "cameras"):
+        raise ValueError("physical DG5F requires --execute and --source cameras")
+    if args.auto_arm and args.backend != "mock":
+        raise ValueError("--auto-arm is available only with --backend mock")
+    if args.execute and args.backend != "tesollo":
+        raise ValueError("--execute applies only to the physical tesollo backend")
     session = LiveFingerSession(args.reference,source=args.source,hybrid_root=args.hybrid_root,
         seconds=args.seconds,perception_hz=args.perception_hz,ttl_s=args.input_ttl,
         filter_beta=args.filter_beta,out=args.out)
-    old_handlers = {s:signal.signal(s,lambda *_:session.stop_event.set()) for s in (signal.SIGINT,signal.SIGTERM)}
+    controller = None
+    if args.backend != "preview":
+        controller = DG5FHandController(args.hybrid_root,backend=args.backend,execute=args.execute,
+            host=args.hand_ip,port=args.hand_port,slave_id=args.hand_id,ttl_s=args.input_ttl,
+            speed=args.servo_speed,acceleration=args.servo_acceleration,out_dir=session.directory/"executor")
+        session.controller = controller
+        session.report["scope"] = "camera landmarks -> original Hybrid -> original guarded DG5F servo"
+    session.report["backend"] = args.backend
+    session.report["hardware"] = args.backend == "tesollo"
+    interrupted = [False]
+    def request_stop():
+        session.stop_event.set()
+        if controller is not None:
+            controller.stop.set()
+    old_handlers = {s:signal.signal(s,lambda *_:interrupted.__setitem__(0,True)) for s in (signal.SIGINT,signal.SIGTERM)}
     viewer = renderer = video = None
     preview = None
     states = None
@@ -131,16 +166,25 @@ def run_hand_cli(args):
     counts = Counter()
     try:
         session.worker.start()
-        print(json.dumps({"directory":str(session.directory),"source":args.source,"hardware":False}),flush=True)
+        print(json.dumps({"directory":str(session.directory),"source":args.source,"hardware":args.backend == "tesollo"}),flush=True)
         while not session.ready.wait(.05):
+            if interrupted[0]:
+                request_stop()
             if session.stop_event.is_set():
                 break
+        if interrupted[0]:
+            request_stop()
         if session.report["error"]:
             raise RuntimeError(session.report["error"])
         if session.stop_event.is_set():
             return
         preview = DG5FHandPreview(session.model_path,DG5F_JOINT_NAMES)
         states = (session.directory/"preview.jsonl").open("w")
+        if controller is not None:
+            print("DG5F DISARMED: a + Enter = ARM, d = DISARM, r = RECOVER (stays disarmed), q = stop.",flush=True)
+            if args.auto_arm:
+                controller.request("arm")
+        last_control = None
         if args.gui:
             import mujoco.viewer
             viewer = mujoco.viewer.launch_passive(preview.model,preview.data)
@@ -153,9 +197,33 @@ def run_hand_cli(args):
             if not video.isOpened():
                 raise RuntimeError("could not open preview video encoder")
         while session.worker.is_alive() and not session.stop_event.is_set():
+            if interrupted[0]:
+                request_stop()
+                break
             begin = time.monotonic()
             target = session.current()
-            if target is not None and target.sequence != last_sequence:
+            if controller is not None:
+                snapshot = controller.snapshot()
+                status_key = (snapshot.get("runtime_state"),snapshot.get("error"),repr(snapshot.get("request")))
+                if status_key != last_control:
+                    print(json.dumps({k:snapshot.get(k) for k in ("runtime_state","error","request")}),flush=True)
+                    last_control = status_key
+                if not controller.process.is_alive() or not snapshot.get("owner_running",True):
+                    raise RuntimeError(snapshot.get("error") or "DG5F owner stopped")
+                if sys.stdin.isatty() and select.select([sys.stdin],[],[],0)[0]:
+                    key = sys.stdin.readline().strip().lower()
+                    if key == "q":
+                        session.stop_event.set()
+                    elif key in ("a","d","r"):
+                        controller.request({"a":"arm","d":"disarm","r":"recover"}[key])
+                measured = np.asarray(snapshot.get("telemetry",{}).get("pos"),float)
+                if (measured.shape == (20,) and np.isfinite(measured).all() and
+                        snapshot.get("hardware",{}).get("last_position_sample_age_ms",float("inf"))<=100):
+                    counts["clipped_joints"] += preview.apply(np.deg2rad(measured))
+                    counts["measured_updates"] += 1
+                    states.write(json.dumps({"host_time_us":time.monotonic_ns()//1000,
+                        "source":"SDK telemetry","q_rad":preview.q.tolist(),"runtime_state":snapshot.get("runtime_state")})+"\n")
+            elif target is not None and target.sequence != last_sequence:
                 counts["clipped_joints"] += preview.apply(target.q_rad)
                 counts["applied_targets"] += 1
                 last_sequence = target.sequence
@@ -173,10 +241,24 @@ def run_hand_cli(args):
             import cv2
             cv2.imwrite(str(session.directory/"preview.png"),preview.render(renderer)[...,::-1])
     except Exception as exc:
-        session.report["error"] = f"{type(exc).__name__}: {exc}"
+        if not (session.stop_event.is_set() and str(exc) in ("operator_stop","DG5F owner stopped")):
+            session.report["error"] = f"{type(exc).__name__}: {exc}"
     finally:
         session.stop_event.set()
+        if controller is not None:
+            controller.stop.set()
         session.worker.join(timeout=15)
+        if controller is not None:
+            try:
+                final = controller.close()
+                (session.directory/"executor").mkdir(parents=True,exist_ok=True)
+                (session.directory/"executor/final.json").write_text(json.dumps(_safe(final),indent=2,allow_nan=False)+"\n")
+                session.report["executor_final"] = {k:final.get(k) for k in
+                    ("runtime_state","state_before_close","closed","armed","arm_count","error","source_sequence")}
+                if final.get("runtime_state") == "FAULT":
+                    session.report["error"] = final.get("error") or "DG5F executor fault"
+            except Exception as exc:
+                session.report["error"] = f"executor shutdown: {exc}"
         for resource in (states,video,renderer,viewer):
             if resource is not None:
                 (resource.release if resource is video else resource.close)()

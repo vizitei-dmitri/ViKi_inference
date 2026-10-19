@@ -5,8 +5,11 @@ For **finger-only DG5F following**, use `viki live-hand`, provided by Compose's
 existing Hybrid Vector/DexPilot solver and an independent MuJoCo kinematic
 display. It does not instantiate the arm executor. Recorded RGB-D and actual
 calibrated cameras share the same causal estimator; see
-[finger live guide](../../docs/live_dg5f_hand.md). This first integration provides
-model preview and joint targets; physical Tesollo execution is not exposed.
+[finger live guide](../../docs/live_dg5f_hand.md). `--backend mock|tesollo`
+adds the original guarded DG5F Runtime in a spawned SDK-owner process.
+Tesollo requires `--execute --source cameras` and manual ARM; no automatic
+hardware ARM or recorded-input execution is exposed. Its camera-to-physical
+integration still requires validation on the actual rig.
 
 This runtime connects current RGB-D observations to incremental retargeting
 and a separate arm executor. It does not run the offline episode pipeline

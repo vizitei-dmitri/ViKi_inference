@@ -5,6 +5,13 @@ canonical 20-joint positions, explicit MuJoCo joint-range clipping, `mj_forward`
 It is not a force/contact/actuator simulation and opens no hardware connection.
 Target radians and actually displayed radians are logged separately.
 
+`DG5FHandController` wraps the original DG5F project's servo/current/contact
+Runtime in a separate SDK-owner process. Latest targets retain camera source
+time; invalid/expired input holds the last accepted trajectory state. Startup
+is DISARMED, ARM seeds measured pose, and recovery is explicit. The optional
+`live-hand-hardware` image builds the existing native SDK wrapper and verifies
+its source hashes before connecting. See [the DG5F guide](../../docs/live_dg5f_hand.md).
+
 **Stage 5** · `plan.h5` → `replay.h5` · paper §3.8
 
 Execute the synthesised joint trajectory and record measured arm states.

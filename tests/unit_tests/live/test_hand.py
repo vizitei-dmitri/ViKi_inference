@@ -1,9 +1,11 @@
 """The independent finger display cannot consume expired or invalid targets."""
 import numpy as np
 import pytest
+from types import SimpleNamespace
 
 from viki.contracts import HandJointTarget
 from viki.live import LiveFingerSession
+from viki.live import run_hand_cli
 
 
 def test_latest_target_expiry_and_invalid_replace_previous(tmp_path):
@@ -20,3 +22,14 @@ def test_latest_target_expiry_and_invalid_replace_previous(tmp_path):
 def test_invalid_settings_rejected(tmp_path,settings):
     with pytest.raises(ValueError):
         LiveFingerSession("unused",out=tmp_path,**settings)
+
+
+@pytest.mark.parametrize("backend,execute,source,auto_arm",[
+    ("tesollo",False,"cameras",False),
+    ("tesollo",True,"recorded",False),
+    ("tesollo",True,"cameras",True),
+    ("mock",True,"recorded",False),
+])
+def test_cli_rejects_unauthorized_hardware_paths_before_start(backend,execute,source,auto_arm):
+    with pytest.raises(ValueError):
+        run_hand_cli(SimpleNamespace(backend=backend,execute=execute,source=source,auto_arm=auto_arm))

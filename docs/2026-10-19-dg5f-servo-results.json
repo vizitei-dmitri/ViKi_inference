@@ -1,0 +1,179 @@
+{
+  "scope": "recorded RGB-D causal perception, original guarded Runtime with mock backend; no physical execution",
+  "runs": [
+    {
+      "directory": "data/live_hand_servo_validation/repeat_1/1215afeadbce48e8b85a180609baee9e",
+      "episode": "2026-10-06_11-00-24",
+      "counts": {
+        "estimates": 120,
+        "valid_targets": 95,
+        "contact_frames": 84,
+        "incomplete_or_invalid_observation": 25
+      },
+      "final": {
+        "runtime_state": "CLOSED",
+        "state_before_close": "TRACKING_HOLD",
+        "closed": true,
+        "armed": false,
+        "arm_count": 1,
+        "error": "",
+        "source_sequence": null
+      },
+      "states": {
+        "DISARMED": 13,
+        "TRACKING_HOLD": 149,
+        "ACTIVE": 380
+      },
+      "cycles": 542,
+      "period_median_ms": 16.665871000441257,
+      "period_p95_ms": 16.806441002700012,
+      "errors": []
+    },
+    {
+      "directory": "data/live_hand_servo_validation/repeat_1/735cf9008ee44d8796ab3b66ecd10f8b",
+      "episode": "2026-10-06_11-18-17",
+      "counts": {
+        "estimates": 81,
+        "valid_targets": 68,
+        "contact_frames": 38,
+        "incomplete_or_invalid_observation": 13
+      },
+      "final": {
+        "runtime_state": "CLOSED",
+        "state_before_close": "TRACKING_HOLD",
+        "closed": true,
+        "armed": false,
+        "arm_count": 1,
+        "error": "",
+        "source_sequence": null
+      },
+      "states": {
+        "DISARMED": 11,
+        "TRACKING_HOLD": 97,
+        "ACTIVE": 268
+      },
+      "cycles": 376,
+      "period_median_ms": 16.667110998241697,
+      "period_p95_ms": 16.817239997180877,
+      "errors": []
+    },
+    {
+      "directory": "data/live_hand_servo_validation/repeat_1/7871494c858748dc9546f8bc7ef15b58",
+      "episode": "2026-10-06_11-15-00",
+      "counts": {
+        "estimates": 84,
+        "valid_targets": 69,
+        "contact_frames": 38,
+        "incomplete_or_invalid_observation": 15
+      },
+      "final": {
+        "runtime_state": "CLOSED",
+        "state_before_close": "TRACKING_HOLD",
+        "closed": true,
+        "armed": false,
+        "arm_count": 1,
+        "error": "",
+        "source_sequence": null
+      },
+      "states": {
+        "DISARMED": 12,
+        "TRACKING_HOLD": 119,
+        "ACTIVE": 272
+      },
+      "cycles": 403,
+      "period_median_ms": 16.66347450009198,
+      "period_p95_ms": 16.821363002236467,
+      "errors": []
+    },
+    {
+      "directory": "data/live_hand_servo_validation/repeat_2/b464493b006842cf93f761c0e2afa075",
+      "episode": "2026-10-06_11-00-24",
+      "counts": {
+        "estimates": 119,
+        "valid_targets": 92,
+        "contact_frames": 78,
+        "incomplete_or_invalid_observation": 27
+      },
+      "final": {
+        "runtime_state": "CLOSED",
+        "state_before_close": "TRACKING_HOLD",
+        "closed": true,
+        "armed": false,
+        "arm_count": 1,
+        "error": "",
+        "source_sequence": null
+      },
+      "states": {
+        "DISARMED": 11,
+        "TRACKING_HOLD": 161,
+        "ACTIVE": 371
+      },
+      "cycles": 543,
+      "period_median_ms": 16.667595999024343,
+      "period_p95_ms": 16.80796199798351,
+      "errors": []
+    },
+    {
+      "directory": "data/live_hand_servo_validation/repeat_2/b57d918812d54ec5ac59716a680d4b5f",
+      "episode": "2026-10-06_11-15-00",
+      "counts": {
+        "estimates": 84,
+        "valid_targets": 71,
+        "contact_frames": 40,
+        "incomplete_or_invalid_observation": 13
+      },
+      "final": {
+        "runtime_state": "CLOSED",
+        "state_before_close": "TRACKING_HOLD",
+        "closed": true,
+        "armed": false,
+        "arm_count": 1,
+        "error": "",
+        "source_sequence": null
+      },
+      "states": {
+        "DISARMED": 10,
+        "TRACKING_HOLD": 246,
+        "ACTIVE": 294
+      },
+      "cycles": 550,
+      "period_median_ms": 16.667808002239326,
+      "period_p95_ms": 17.28746699882322,
+      "errors": []
+    },
+    {
+      "directory": "data/live_hand_servo_validation/repeat_2/bd9557c7e7da4ba1b4b63f93a932e1e3",
+      "episode": "2026-10-06_11-18-17",
+      "counts": {
+        "estimates": 82,
+        "valid_targets": 73,
+        "contact_frames": 45,
+        "incomplete_or_invalid_observation": 9
+      },
+      "final": {
+        "runtime_state": "CLOSED",
+        "state_before_close": "TRACKING_HOLD",
+        "closed": true,
+        "armed": false,
+        "arm_count": 1,
+        "error": "",
+        "source_sequence": null
+      },
+      "states": {
+        "DISARMED": 11,
+        "TRACKING_HOLD": 71,
+        "ACTIVE": 291
+      },
+      "cycles": 373,
+      "period_median_ms": 16.667281999616534,
+      "period_p95_ms": 16.828210002131527,
+      "errors": []
+    }
+  ],
+  "totals": {
+    "estimates": 570,
+    "valid_targets": 468,
+    "contact_frames": 323
+  },
+  "cycles": 2787
+}

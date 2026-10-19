@@ -119,7 +119,7 @@ services:
     entrypoint: ["/app/docker/entrypoint.sh"]
     command: ["uvicorn", "viki.server.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
-  live-hand:
+  live-hand: &live-hand
     <<: *live
     build:
       context: .
@@ -143,6 +143,16 @@ services:
         bind:
           create_host_path: false
     command: ["live-hand", "--help"]
+
+  live-hand-hardware:
+    <<: *live-hand
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dg5f
+      network: host
+      additional_contexts:
+        dg5f_source: ${DG5F_HYBRID_ROOT:-../hand_hybryd_retargeting/dg5f_camera_demo}
+    image: viki-live-hand-sdk
 
   live-test:
     <<: *live
