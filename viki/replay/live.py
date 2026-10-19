@@ -893,4 +893,3 @@ class LiveController:
                     channel.close()
                 self._queues_closed = True
         return result
-
