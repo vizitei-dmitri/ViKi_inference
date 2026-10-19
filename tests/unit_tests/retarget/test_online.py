@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from scipy.spatial.transform import Rotation
 
-from viki.contracts import LiveControlOptions
+from viki.contracts import LiveControlOptions, LiveIKTuning
 from viki.retarget import OnlineIKError, OnlineRetargeter
 
 
@@ -57,6 +57,28 @@ def test_same_fk_reference_produces_no_initial_correction(options):
     assert result["position_error_m"] == 0
     assert result["orientation_error_rad"] == 0
     assert result["margins"]["floor"] == 1
+
+
+@pytest.mark.parametrize("field,value", [("position_gain", 0), ("orientation_gain", -1),
+    ("damping", 0), ("damping", float("nan")), ("acceleration_weight", -1)])
+def test_invalid_objective_tuning_is_rejected_before_model_use(options, field, value):
+    with pytest.raises(ValueError, match=field):
+        OnlineRetargeter(options, CartesianArm(), tuning=replace(LiveIKTuning(), **{field: value}))
+
+
+def test_gain_experiment_improves_unsaturated_tracking_without_relaxing_bounds(options):
+    errors = []
+    for gain in (6., 15.):
+        ik = OnlineRetargeter(options, CartesianArm(), tuning=LiveIKTuning(position_gain=gain))
+        q, v = np.zeros(6), np.zeros(6)
+        for _ in range(150):
+            row = ik.step(q, q, v, np.array([.01, 0., 0.]), np.eye(3), .008)
+            assert np.max(np.abs(row["velocity"]-v)) <= options.max_acceleration*.008+1e-10
+            assert np.max(np.abs(row["velocity"])) <= options.max_velocity+1e-10
+            q, v = row["q"], row["velocity"]
+        errors.append(row["position_error_m"])
+        assert ik.manifest["objective_tuning"]["position_gain"] == gain
+    assert errors[1] < errors[0]/2
 
 
 def test_target_replacement_and_stop_bound_every_accepted_sample(options):

@@ -10,12 +10,13 @@ from __future__ import annotations
 import hashlib
 import importlib
 from collections import OrderedDict
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
 from scipy.spatial.transform import Rotation
 
-from viki.contracts import LiveControlOptions
+from viki.contracts import LiveControlOptions, LiveIKTuning
 from viki.retarget.robots import normalize_robot
 from viki.retarget.run import _load_robot_description
 from viki.retarget.solver import (PinocchioKinematics, _floor_support_descriptor,
@@ -214,8 +215,18 @@ class OnlineRetargeter:
     nonlinear check, not a continuous swept-volume certificate.
     """
 
-    def __init__(self, options: LiveControlOptions, kinematics=None) -> None:
+    def __init__(self, options: LiveControlOptions, kinematics=None, *,
+                 tuning: LiveIKTuning | None = None) -> None:
         options.validate()
+        if tuning is None:
+            from viki.config import load
+
+            cfg = load()
+            tuning = LiveIKTuning(position_gain=cfg.LIVE_IK_POSITION_GAIN,
+                orientation_gain=cfg.LIVE_IK_ORIENTATION_GAIN, damping=cfg.LIVE_IK_DAMPING,
+                acceleration_weight=cfg.LIVE_IK_ACCELERATION_WEIGHT)
+        tuning.validate()
+        self.tuning = tuning
         self.options = options
         self.kinematics = (kinematics if kinematics is not None
                            else _load_bare_kinematics(options))
@@ -254,6 +265,7 @@ class OnlineRetargeter:
                 loader = importlib.import_module("robot_descriptions.loaders.pinocchio")
                 source = Path(loader.get_urdf_path(description))
         self.manifest = {
+            "objective_tuning": asdict(tuning),
             "robot": "ur10e", "task_frame": "tool0", "bare_arm": True,
             "joint_names": list(normalize_robot("ur10e").joint_names),
             "urdf_path": str(source) if source else None,
@@ -400,11 +412,12 @@ class OnlineRetargeter:
         # World angular error matches LOCAL_WORLD_ALIGNED Jacobian axes.
         error_r = Rotation.from_matrix(target_r @ r.T).as_rotvec()
         weighted_j = np.vstack((jp, 0.15 * jr))
-        desired = np.concatenate((6.0 * (target_p - p), 0.15 * 4.0 * error_r))
+        desired = np.concatenate((self.tuning.position_gain * (target_p - p),
+                                  0.15 * self.tuning.orientation_gain * error_r))
         desired -= weighted_j @ (command - measured) / period
         # Damping limits singularity amplification; acceleration regularisation
         # refers to local accepted history, never to the registered home pose.
-        damping, acceleration_weight = 1e-4, 1e-3
+        damping, acceleration_weight = self.tuning.damping, self.tuning.acceleration_weight
         hessian = weighted_j.T @ weighted_j + (damping + acceleration_weight) * np.eye(6)
         linear = weighted_j.T @ desired + acceleration_weight * previous
         lower, upper = self._bounds(command, previous, period)

@@ -247,6 +247,7 @@ standing between a refactor and a silently broken stage. Check any touched JS wi
 |---|---|
 | [`bugs.md`](bugs.md) | narrow traps: off-by-one constants, settings that do nothing, hardware that does not work — read before debugging the rig |
 | [`docs/math.md`](docs/math.md) | the full mathematical description of the pipeline |
+| [`docs/live_improvement_todo.md`](docs/live_improvement_todo.md) | persistent online filtering / IK experiment checklist; update progress and link measured results |
 | [`docs/robust_retarget_experiments.md`](docs/robust_retarget_experiments.md) | measurement protocols and results (E6–E14) |
 | [`docs/object_centric_decision.md`](docs/object_centric_decision.md) | why production object-driven retarget remains gated |
 | [`docs/paper_code_divergences.md`](docs/paper_code_divergences.md) | where the thesis text and the code disagree |

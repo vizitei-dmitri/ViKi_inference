@@ -199,6 +199,23 @@ tool separately. Rig-space cloud/input layers receive the display anchor;
 calibration-space desired TCP, achieved TCP, arm and gripper do not receive it a
 second time.
 
+## Live objective tuning
+
+`OnlineRetargeter(options, tuning=LiveIKTuning(...))` accepts explicit objective
+parameters from `viki.contracts`. Without an override it reads
+`LIVE_IK_POSITION_GAIN`, `LIVE_IK_ORIENTATION_GAIN`, `LIVE_IK_DAMPING` and
+`LIVE_IK_ACCELERATION_WEIGHT` from configuration. Defaults remain 6 s⁻¹,
+4 s⁻¹, 1e-4 and 1e-3. Applied values are saved in
+`manifest["objective_tuning"]` and the live executor's kinematic-model report.
+Changing them does not change velocity/acceleration, floor, collision or
+tracking admission bounds. Restart the session after configuration changes.
+The live objective is separate from all offline `RETARGET_*` weights.
+
+Use the simulation-only comparison in
+[replay/README.md](../replay/README.md#online-ik-experiments) before selecting
+new values. In position following, the bound orientation is still held by
+the orientation objective; the hand's changing orientation is not followed.
+
 `Gripper` owns the command-vector contract. `LinearGripper` produces one
 `opening` dimension; an anthropomorphic implementation can add actuator
 dimensions without changing retarget orchestration or the plan container.

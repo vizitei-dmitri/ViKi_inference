@@ -198,6 +198,22 @@ class HumanTarget:
 
 
 @dataclass(frozen=True)
+class LiveIKTuning:
+    """Objective tuning; joint, acceleration and collision bounds stay separate."""
+
+    position_gain: float = 6.0  # s^-1
+    orientation_gain: float = 4.0  # s^-1
+    damping: float = 1e-4
+    acceleration_weight: float = 1e-3
+
+    def validate(self) -> None:
+        for name in ("position_gain", "orientation_gain", "damping", "acceleration_weight"):
+            value = getattr(self, name)
+            if not np.isfinite(value) or value < 0 or (name != "acceleration_weight" and value == 0):
+                raise ValueError(f"{name} must be finite and {'nonnegative' if name == 'acceleration_weight' else 'positive'}")
+
+
+@dataclass(frozen=True)
 class LiveControlOptions:
     """Per-session arm-only settings, independent of frozen offline profiles."""
 

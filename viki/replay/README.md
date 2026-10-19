@@ -72,6 +72,37 @@ the recorded timestamp is a controller clock, not a camera timestamp. Summary
 rows take the first control sample at/after each source-frame time. Keep the
 control-rate log for subsequent policy work.
 
+## Online IK experiments
+
+`benchmark_live_ik(session, out_dir, variants, scenario="recorded")` is a
+simulation-only public API. The CLI compares objective gains and optional
+regularization while retaining the source session's constraints:
+
+```bash
+docker compose run --rm --entrypoint python live scripts/benchmark_live_ik.py \
+  data/live_sessions/<id> --out data/live_ik_experiments/<new-name> --regularization
+```
+
+The first continuous active accepted segment of a **closed, position-only
+MuJoCo log** supplies targets. Values become available at their original logged
+host times; causal zero-order hold samples them on the nominal servo grid.
+Source TTL is not renewed. Initial measured joints, model and configured limits
+are identical for every candidate; URDF hash mismatch rejects comparison.
+No perception is rerun, and no RTDE backend or live owner is constructed.
+
+`--scenario step` and `--scenario ramp` instead generate explicit fresh synthetic
+robot-base X targets ±20 mm, using the recorded model/configuration and start
+pose. They include stops and reversals. Stationary-window error and residual
+speed are reported separately; they are convergence measures, not measured
+sensor jitter. The synthetic input is explicitly identified in the report.
+
+Each new output directory holds frozen `inputs.npz`, per-variant measured and
+commanded traces, and `report.json` with hashes, errors, saturation fractions,
+solver timings and model margins. Partial/rejected candidates are retained and
+marked failed. Virtual time is deterministic; this measures model-space TCP
+tracking and does not validate wall-clock deadlines or physical robot accuracy.
+The comparison does not change live defaults or protected offline baselines.
+
 ## Remaining work
 
 For causal human following use `viki live`, documented in

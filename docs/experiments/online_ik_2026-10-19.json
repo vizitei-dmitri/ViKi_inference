@@ -1,0 +1,1549 @@
+{
+  "date": "2026-10-19",
+  "scope": "Nominal-time MuJoCo model-space TCP tracking. No hand ground truth or physical UR accuracy claim.",
+  "defaults_changed": false,
+  "cases": [
+    {
+      "name": "recorded",
+      "scenario": "recorded",
+      "source_session": "27daacc0ad084015b4bb409853ec7fda",
+      "source_episode": "2026-10-06_11-15-00",
+      "source_log_sha256": "4a19bc114cdc3ca4cd008864cfcd41b61f06fa2a81a828cf5a724a445dd29a7d",
+      "source_manifest_sha256": "37489cc924f0a92b7bfd2be3f0e2d437fd993eac2cea8287482c5eda0c4cdeaa",
+      "inputs_sha256": "7b9bda689fbb447464febe2f5dc5e97ea3165850d53dfad121235f324bef2582",
+      "samples": 256,
+      "duration_s": 5.1,
+      "variants": [
+        {
+          "name": "gain=6",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 26.604902421024647,
+            "median": 24.689199327940905,
+            "p95": 58.5452621878261,
+            "max": 62.79361723520037,
+            "rmse": 30.981199808384687
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.10115038230737473,
+          "peak_observed_velocity_rad_s": 0.0767448248844745,
+          "peak_acceleration_rad_s2": 0.5000000000000004,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.515625,
+          "minimum_model_margins": {
+            "joint": 1.509047424542235,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007472371344122708
+          },
+          "solver_ms": {
+            "mean": 6.280003769525422,
+            "median": 6.138957500297693,
+            "p95": 7.422971749747376,
+            "max": 11.544742000296537,
+            "rmse": 6.331998931396138
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=6,damping=1e-05",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 1e-05,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 26.604412119825398,
+            "median": 24.689020053859565,
+            "p95": 58.54509525236347,
+            "max": 62.79354484368419,
+            "rmse": 30.98059517471307
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.10162760387838082,
+          "peak_observed_velocity_rad_s": 0.07694391547916667,
+          "peak_acceleration_rad_s2": 0.5000000000000006,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.515625,
+          "minimum_model_margins": {
+            "joint": 1.5090408161955335,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007472401955269485
+          },
+          "solver_ms": {
+            "mean": 5.902105871133045,
+            "median": 5.916667999827041,
+            "p95": 6.2569495000843744,
+            "max": 7.024907000413805,
+            "rmse": 5.914979971588744
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=6,damping=0.001",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 26.613944240017638,
+            "median": 24.687789943911962,
+            "p95": 58.58166325867295,
+            "max": 62.841372175441585,
+            "rmse": 30.992575597305375
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.10064392922013664,
+          "peak_observed_velocity_rad_s": 0.07667889862166102,
+          "peak_acceleration_rad_s2": 0.5000000000000004,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.5078125,
+          "minimum_model_margins": {
+            "joint": 1.509100932312131,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007471982814775575
+          },
+          "solver_ms": {
+            "mean": 6.181044156249982,
+            "median": 5.896970999856421,
+            "p95": 8.782767749607956,
+            "max": 13.025887999901897,
+            "rmse": 6.310201435071393
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=6,acceleration_weight=0",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.0
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 26.605121342290055,
+            "median": 24.689662610403964,
+            "p95": 58.54462670335696,
+            "max": 62.7938656820823,
+            "rmse": 30.981371400818187
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.1016136575740738,
+          "peak_observed_velocity_rad_s": 0.07696526214106968,
+          "peak_acceleration_rad_s2": 0.5000000000000011,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.55078125,
+          "minimum_model_margins": {
+            "joint": 1.509036065839244,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007472279765848126
+          },
+          "solver_ms": {
+            "mean": 6.2555622812645595,
+            "median": 6.192770500092593,
+            "p95": 6.888899750038036,
+            "max": 13.95545899958961,
+            "rmse": 6.29662272329479
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=6,acceleration_weight=0.0001",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.0001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 26.60506435648247,
+            "median": 24.689600750703455,
+            "p95": 58.54463080470845,
+            "max": 62.793343024442116,
+            "rmse": 30.981283551696443
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.10154174289110203,
+          "peak_observed_velocity_rad_s": 0.07689219558299439,
+          "peak_acceleration_rad_s2": 0.5000000000000006,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.546875,
+          "minimum_model_margins": {
+            "joint": 1.5090399591684462,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007472293789721543
+          },
+          "solver_ms": {
+            "mean": 6.566732101553896,
+            "median": 6.319604999589501,
+            "p95": 8.307040999625315,
+            "max": 14.403481000044849,
+            "rmse": 6.666066423915288
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=6,acceleration_weight=0.01",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.01
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 26.61281919914494,
+            "median": 24.704843750913902,
+            "p95": 58.56991506371531,
+            "max": 62.83105482228067,
+            "rmse": 30.99116138157915
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.10038612368633969,
+          "peak_observed_velocity_rad_s": 0.07748479489841775,
+          "peak_acceleration_rad_s2": 0.5000000000000004,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.43359375,
+          "minimum_model_margins": {
+            "joint": 1.5089680430562082,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007472607201313361
+          },
+          "solver_ms": {
+            "mean": 5.90335389064478,
+            "median": 5.862024000180099,
+            "p95": 6.236551249912736,
+            "max": 12.623239000276953,
+            "rmse": 5.9420257024781264
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 20.453127904152055,
+            "median": 17.709554785222856,
+            "p95": 46.808574113983425,
+            "max": 52.22239978197249,
+            "rmse": 24.253363943095433
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.1321040953540986,
+          "peak_observed_velocity_rad_s": 0.10302119020432239,
+          "peak_acceleration_rad_s2": 0.5000000000000021,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.66796875,
+          "minimum_model_margins": {
+            "joint": 1.506163601986776,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007453490914753301
+          },
+          "solver_ms": {
+            "mean": 6.652935640566682,
+            "median": 6.121355499544734,
+            "p95": 10.763095750235152,
+            "max": 16.86649499970372,
+            "rmse": 6.9835607257815955
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10,damping=1e-05",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 1e-05,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 20.442618009926885,
+            "median": 17.710084060238593,
+            "p95": 46.70930277032752,
+            "max": 52.24454677908341,
+            "rmse": 24.23942838165512
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.13731924746481677,
+          "peak_observed_velocity_rad_s": 0.10420154710315395,
+          "peak_acceleration_rad_s2": 0.5000000000000018,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.6796875,
+          "minimum_model_margins": {
+            "joint": 1.50618042814079,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007453531978441341
+          },
+          "solver_ms": {
+            "mean": 5.935579945305136,
+            "median": 5.799881500479387,
+            "p95": 7.173324249833968,
+            "max": 12.69000699994649,
+            "rmse": 5.982623931845089
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10,damping=0.001",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 20.464968246875074,
+            "median": 17.70978808589629,
+            "p95": 46.81458806791308,
+            "max": 52.35269743907601,
+            "rmse": 24.27148842650168
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.133452854269714,
+          "peak_observed_velocity_rad_s": 0.10107251618950742,
+          "peak_acceleration_rad_s2": 0.5000000000000008,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.66796875,
+          "minimum_model_margins": {
+            "joint": 1.5062007697553803,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007453225582779027
+          },
+          "solver_ms": {
+            "mean": 5.763582207013229,
+            "median": 5.747698000504897,
+            "p95": 6.197839000151362,
+            "max": 7.418043999678048,
+            "rmse": 5.778288514756643
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10,acceleration_weight=0",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.0
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 20.45310029976316,
+            "median": 17.710293212414328,
+            "p95": 46.78758782949511,
+            "max": 52.23201697001366,
+            "rmse": 24.2529064537216
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.1308622326910093,
+          "peak_observed_velocity_rad_s": 0.10296270565517593,
+          "peak_acceleration_rad_s2": 0.5000000000000017,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.6875,
+          "minimum_model_margins": {
+            "joint": 1.506210346985182,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007453549965052153
+          },
+          "solver_ms": {
+            "mean": 5.74357118749802,
+            "median": 5.728487500164192,
+            "p95": 6.055188250229548,
+            "max": 9.95589200010727,
+            "rmse": 5.761557124242053
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10,acceleration_weight=0.0001",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.0001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 20.45847973318795,
+            "median": 17.70945704575218,
+            "p95": 46.81710685565153,
+            "max": 52.2257739451921,
+            "rmse": 24.259717935090926
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.13300990881961924,
+          "peak_observed_velocity_rad_s": 0.1032282154053562,
+          "peak_acceleration_rad_s2": 0.5000000000000018,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.671875,
+          "minimum_model_margins": {
+            "joint": 1.5061852495150907,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007453555456557355
+          },
+          "solver_ms": {
+            "mean": 5.77870026956262,
+            "median": 5.801306999728695,
+            "p95": 6.098001249938534,
+            "max": 7.873786000345717,
+            "rmse": 5.7926996419403025
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10,acceleration_weight=0.01",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.01
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 20.46817568536266,
+            "median": 17.69566349831289,
+            "p95": 46.97622321325975,
+            "max": 52.379155627165844,
+            "rmse": 24.282226122389993
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.13197271486535578,
+          "peak_observed_velocity_rad_s": 0.10141185863697032,
+          "peak_acceleration_rad_s2": 0.5000000000000008,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.6171875,
+          "minimum_model_margins": {
+            "joint": 1.5062137557111142,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007453828943345259
+          },
+          "solver_ms": {
+            "mean": 5.740741238295044,
+            "median": 5.737184000281559,
+            "p95": 6.230360250356171,
+            "max": 6.898964999891177,
+            "rmse": 5.754311258261062
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 15.483502477673312,
+            "median": 12.143436064895747,
+            "p95": 36.299789805797545,
+            "max": 42.902610991936385,
+            "rmse": 18.76843933666388
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.15391909957142677,
+          "peak_observed_velocity_rad_s": 0.12084732683555632,
+          "peak_acceleration_rad_s2": 0.5000000000000014,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.75,
+          "minimum_model_margins": {
+            "joint": 1.5060057424193463,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007436260108353472
+          },
+          "solver_ms": {
+            "mean": 5.971501734364892,
+            "median": 5.823727999995754,
+            "p95": 6.748956000592443,
+            "max": 7.619609000357741,
+            "rmse": 5.9979887119510185
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15,damping=1e-05",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 1e-05,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 15.476699224078097,
+            "median": 12.139424928871254,
+            "p95": 36.29069003173071,
+            "max": 42.895356038466474,
+            "rmse": 18.7615624492546
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.15386596510249193,
+          "peak_observed_velocity_rad_s": 0.1210670834210489,
+          "peak_acceleration_rad_s2": 0.5000000000000014,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.75,
+          "minimum_model_margins": {
+            "joint": 1.506021246000842,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007436684341234276
+          },
+          "solver_ms": {
+            "mean": 6.5280748750211615,
+            "median": 6.5712265000001935,
+            "p95": 6.975807249773425,
+            "max": 7.79061899993394,
+            "rmse": 6.543387627878215
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15,damping=0.001",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 15.485469391100475,
+            "median": 12.155972283489065,
+            "p95": 36.325976199427885,
+            "max": 42.913486467470435,
+            "rmse": 18.772390544652247
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.1524526268459989,
+          "peak_observed_velocity_rad_s": 0.11995955848123929,
+          "peak_acceleration_rad_s2": 0.5000000000000008,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.74609375,
+          "minimum_model_margins": {
+            "joint": 1.5059797279669238,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007435014079996867
+          },
+          "solver_ms": {
+            "mean": 6.912728648416078,
+            "median": 6.7006925000896445,
+            "p95": 8.910304000437463,
+            "max": 11.979692999375402,
+            "rmse": 6.976240081601855
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15,acceleration_weight=0",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.0
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 15.456787469190754,
+            "median": 12.141657442343345,
+            "p95": 36.2234008857043,
+            "max": 42.83136612674264,
+            "rmse": 18.733845002760592
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.1572144976487922,
+          "peak_observed_velocity_rad_s": 0.12286399062437686,
+          "peak_acceleration_rad_s2": 0.5000000000000019,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.76171875,
+          "minimum_model_margins": {
+            "joint": 1.5060447275614763,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007435170695952176
+          },
+          "solver_ms": {
+            "mean": 6.526469101519439,
+            "median": 6.540980500631122,
+            "p95": 6.882715249503235,
+            "max": 7.30373199985479,
+            "rmse": 6.538269577500536
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15,acceleration_weight=0.0001",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.0001
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 15.45930449200724,
+            "median": 12.140683721803503,
+            "p95": 36.22639913120823,
+            "max": 42.83897454213824,
+            "rmse": 18.73763237257282
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.154438403885734,
+          "peak_observed_velocity_rad_s": 0.12113738023090757,
+          "peak_acceleration_rad_s2": 0.5000000000000014,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.76171875,
+          "minimum_model_margins": {
+            "joint": 1.506025257461715,
+            "floor": 0.09899872876405716,
+            "collision": 0.000743558579905372
+          },
+          "solver_ms": {
+            "mean": 6.226058878965546,
+            "median": 6.160673499834957,
+            "p95": 6.737053000733795,
+            "max": 8.337888999449206,
+            "rmse": 6.236985555939684
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15,acceleration_weight=0.01",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.01
+          },
+          "passed": true,
+          "samples": 256,
+          "tcp_error_mm": {
+            "mean": 15.499668702072052,
+            "median": 12.148083346180133,
+            "p95": 36.31514120898392,
+            "max": 43.03961010467251,
+            "rmse": 18.80133446408276
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.1550445616370074,
+          "peak_observed_velocity_rad_s": 0.1231073124665234,
+          "peak_acceleration_rad_s2": 0.5000000000000008,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.734375,
+          "minimum_model_margins": {
+            "joint": 1.5059558055071327,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007434874437129563
+          },
+          "solver_ms": {
+            "mean": 6.591821906223316,
+            "median": 6.3752924997970695,
+            "p95": 7.791487250187856,
+            "max": 10.563878000539262,
+            "rmse": 6.632299438215104
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        }
+      ],
+      "urdf_sha256": "3224acffd7a88170fc9ff4520ef67e8617d658b4f5d9f65925a846cf3d4ca84a",
+      "simulation": {
+        "model": "UR10e",
+        "backend": "mujoco",
+        "version": "3.15.0",
+        "model_xml_sha256": "fc50163a7d83af12d950bddc4df7ff61817895540922a40d23b5855f372888d3",
+        "model_source_commit": "e4049d0a3bfd58d2a3081614e6777d4007e3f86a",
+        "gravity_compensation": true,
+        "original_base_quaternion_wxyz": [
+          0.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "frame": "robot_base",
+        "scope": "bare arm and configured floor"
+      }
+    },
+    {
+      "name": "slow",
+      "scenario": "recorded",
+      "source_session": "9b53a009a7004a8794d755dd029c3636",
+      "source_episode": "2026-10-06_11-15-00",
+      "source_log_sha256": "c74688bc73a9ea3777cb130f2f7d2b987989e3d6d80060e82e872251865a3291",
+      "source_manifest_sha256": "a7380da4cd02a126086db02c7e73205eec972db8556c91602fffa8bcbd5335b7",
+      "inputs_sha256": "2f69f375d5115c9465cb3429b4c614a73b79af949ad22130f45b4ca8fb55d9e5",
+      "samples": 173,
+      "duration_s": 3.44,
+      "variants": [
+        {
+          "name": "gain=6",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 173,
+          "tcp_error_mm": {
+            "mean": 12.741030730698808,
+            "median": 12.45394964184499,
+            "p95": 21.760865513515938,
+            "max": 22.718176180237077,
+            "rmse": 14.153824100043629
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.04557709530572404,
+          "peak_observed_velocity_rad_s": 0.03174223556268028,
+          "peak_acceleration_rad_s2": 0.5000000000000001,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.2832369942196532,
+          "minimum_model_margins": {
+            "joint": 1.541592653589793,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007678184991049414
+          },
+          "solver_ms": {
+            "mean": 5.966939936436212,
+            "median": 6.024266999702377,
+            "p95": 6.211920400346571,
+            "max": 6.500664999293804,
+            "rmse": 5.981532030114279
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 173,
+          "tcp_error_mm": {
+            "mean": 9.552131704826024,
+            "median": 9.561802832278975,
+            "p95": 17.014805172538463,
+            "max": 18.168830401228373,
+            "rmse": 10.876759466968961
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.05744817487109418,
+          "peak_observed_velocity_rad_s": 0.04233409556071429,
+          "peak_acceleration_rad_s2": 0.5000000000000002,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.5606936416184971,
+          "minimum_model_margins": {
+            "joint": 1.541592653589793,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007678184991049414
+          },
+          "solver_ms": {
+            "mean": 6.059947190732669,
+            "median": 6.0988690001977375,
+            "p95": 6.416409599842154,
+            "max": 6.614206999984162,
+            "rmse": 6.077268331769538
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 173,
+          "tcp_error_mm": {
+            "mean": 7.319178399865143,
+            "median": 7.534467411005997,
+            "p95": 13.264384769581905,
+            "max": 14.779584613841573,
+            "rmse": 8.439953198151454
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.06698477368187279,
+          "peak_observed_velocity_rad_s": 0.047962650037358424,
+          "peak_acceleration_rad_s2": 0.5000000000000004,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.7398843930635838,
+          "minimum_model_margins": {
+            "joint": 1.541592653589793,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007678184991049414
+          },
+          "solver_ms": {
+            "mean": 6.313376410401366,
+            "median": 6.389375000253494,
+            "p95": 6.584093200399366,
+            "max": 7.8216030005933135,
+            "rmse": 6.330909306887938
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        }
+      ],
+      "urdf_sha256": "3224acffd7a88170fc9ff4520ef67e8617d658b4f5d9f65925a846cf3d4ca84a",
+      "simulation": {
+        "model": "UR10e",
+        "backend": "mujoco",
+        "version": "3.15.0",
+        "model_xml_sha256": "fc50163a7d83af12d950bddc4df7ff61817895540922a40d23b5855f372888d3",
+        "model_source_commit": "e4049d0a3bfd58d2a3081614e6777d4007e3f86a",
+        "gravity_compensation": true,
+        "original_base_quaternion_wxyz": [
+          0.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "frame": "robot_base",
+        "scope": "bare arm and configured floor"
+      }
+    },
+    {
+      "name": "holdout",
+      "scenario": "recorded",
+      "source_session": "5ed3050ea7814e17aa8ab251e706421e",
+      "source_episode": "2026-10-06_11-12-44",
+      "source_log_sha256": "b5d0e3e3140fd640a837de7e939f9fbf554d77f5268db7c0ffaaf5e985b6227b",
+      "source_manifest_sha256": "6b93af5985d6c27c21bd130edc47f7a9949e049569387a243d2794e690bacd42",
+      "inputs_sha256": "039cf9115cef9b70d17cd18a720ba0c6862f7b01c01e442cc7277488183bf4b9",
+      "samples": 99,
+      "duration_s": 1.96,
+      "variants": [
+        {
+          "name": "gain=6",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 99,
+          "tcp_error_mm": {
+            "mean": 23.524974180916853,
+            "median": 11.390214632116752,
+            "p95": 62.86128339546507,
+            "max": 66.30839190273952,
+            "rmse": 31.51502439799654
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.09979636136053567,
+          "peak_observed_velocity_rad_s": 0.07983940680528687,
+          "peak_acceleration_rad_s2": 0.5000000000000003,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.6464646464646465,
+          "minimum_model_margins": {
+            "joint": 1.536171250863896,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007463106179827345
+          },
+          "solver_ms": {
+            "mean": 5.933259727324258,
+            "median": 6.031736999830173,
+            "p95": 6.2807416999930865,
+            "max": 6.3215750005838345,
+            "rmse": 5.9626430177386744
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 99,
+          "tcp_error_mm": {
+            "mean": 20.438658705947987,
+            "median": 10.227548930404954,
+            "p95": 50.42160747045799,
+            "max": 53.304678585428576,
+            "rmse": 26.77500746746594
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.1372923656591041,
+          "peak_observed_velocity_rad_s": 0.11323217883161699,
+          "peak_acceleration_rad_s2": 0.5000000000000011,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.7676767676767676,
+          "minimum_model_margins": {
+            "joint": 1.5345335455585918,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007452782461355341
+          },
+          "solver_ms": {
+            "mean": 5.871865383872346,
+            "median": 5.96379699982208,
+            "p95": 6.129595600668836,
+            "max": 6.231959000615461,
+            "rmse": 5.899664805114562
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 99,
+          "tcp_error_mm": {
+            "mean": 17.301165268777293,
+            "median": 10.16532034999896,
+            "p95": 40.378518695377025,
+            "max": 42.431854166240406,
+            "rmse": 22.192298331939586
+          },
+          "stationary_tcp_error_mm": null,
+          "stationary_tcp_speed_mm_s": null,
+          "peak_velocity_rad_s": 0.16535259925526852,
+          "peak_observed_velocity_rad_s": 0.1377128179225905,
+          "peak_acceleration_rad_s2": 0.5000000000000018,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.8484848484848485,
+          "minimum_model_margins": {
+            "joint": 1.533431651626845,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007434849409247365
+          },
+          "solver_ms": {
+            "mean": 6.22120775757378,
+            "median": 6.262025999603793,
+            "p95": 6.985733899909974,
+            "max": 10.026496999671508,
+            "rmse": 6.27676972937548
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        }
+      ],
+      "urdf_sha256": "3224acffd7a88170fc9ff4520ef67e8617d658b4f5d9f65925a846cf3d4ca84a",
+      "simulation": {
+        "model": "UR10e",
+        "backend": "mujoco",
+        "version": "3.15.0",
+        "model_xml_sha256": "fc50163a7d83af12d950bddc4df7ff61817895540922a40d23b5855f372888d3",
+        "model_source_commit": "e4049d0a3bfd58d2a3081614e6777d4007e3f86a",
+        "gravity_compensation": true,
+        "original_base_quaternion_wxyz": [
+          0.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "frame": "robot_base",
+        "scope": "bare arm and configured floor"
+      }
+    },
+    {
+      "name": "step",
+      "scenario": "step",
+      "source_session": "27daacc0ad084015b4bb409853ec7fda",
+      "source_episode": "2026-10-06_11-15-00",
+      "source_log_sha256": "4a19bc114cdc3ca4cd008864cfcd41b61f06fa2a81a828cf5a724a445dd29a7d",
+      "source_manifest_sha256": "37489cc924f0a92b7bfd2be3f0e2d437fd993eac2cea8287482c5eda0c4cdeaa",
+      "inputs_sha256": "277299609a825bc69d1a85ab0c525dd45e29d5e0dec219d7d682adc1f8b57bdb",
+      "samples": 350,
+      "duration_s": 6.98,
+      "variants": [
+        {
+          "name": "gain=6",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 350,
+          "tcp_error_mm": {
+            "mean": 9.447492906940056,
+            "median": 6.9622283745682125,
+            "p95": 28.849918217576853,
+            "max": 37.655357609473974,
+            "rmse": 12.73704581765297
+          },
+          "stationary_tcp_error_mm": {
+            "mean": 4.900979962203464,
+            "median": 4.205568686026119,
+            "p95": 11.641415725822304,
+            "max": 14.101328840888707,
+            "rmse": 5.781426760351577
+          },
+          "stationary_tcp_speed_mm_s": {
+            "mean": 5.382117590406012,
+            "median": 4.626792441122934,
+            "p95": 12.730765947785724,
+            "max": 15.370299216759745,
+            "rmse": 6.339631047813694
+          },
+          "peak_velocity_rad_s": 0.09441892324974434,
+          "peak_observed_velocity_rad_s": 0.06024580813175725,
+          "peak_acceleration_rad_s2": 0.5000000000000047,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.19428571428571428,
+          "minimum_model_margins": {
+            "joint": 1.5097733512753901,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007318454561131213
+          },
+          "solver_ms": {
+            "mean": 5.825703977144648,
+            "median": 5.981190500278899,
+            "p95": 6.172669399893493,
+            "max": 8.299641000121483,
+            "rmse": 5.863060196046949
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 350,
+          "tcp_error_mm": {
+            "mean": 7.277799549590756,
+            "median": 3.529274206027952,
+            "p95": 27.081202967399452,
+            "max": 39.42016422132352,
+            "rmse": 11.521215242311468
+          },
+          "stationary_tcp_error_mm": {
+            "mean": 2.0720368752036737,
+            "median": 1.6368765147248283,
+            "p95": 5.839552305588583,
+            "max": 8.0625878252727,
+            "rmse": 2.666499816863037
+          },
+          "stationary_tcp_speed_mm_s": {
+            "mean": 3.8152414541569217,
+            "median": 3.0058389365002878,
+            "p95": 10.691346938213067,
+            "max": 14.681424183520168,
+            "rmse": 4.892540203072375
+          },
+          "peak_velocity_rad_s": 0.12714750780617912,
+          "peak_observed_velocity_rad_s": 0.08833733062726741,
+          "peak_acceleration_rad_s2": 0.5000000000000063,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.26,
+          "minimum_model_margins": {
+            "joint": 1.5048136555170184,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007318656203382234
+          },
+          "solver_ms": {
+            "mean": 5.849797614313762,
+            "median": 5.971413999759534,
+            "p95": 6.264787750387768,
+            "max": 11.045373999877484,
+            "rmse": 5.893542985714937
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 350,
+          "tcp_error_mm": {
+            "mean": 5.630291991303713,
+            "median": 1.326842776306345,
+            "p95": 25.667449429697022,
+            "max": 39.90272390436419,
+            "rmse": 10.618788099629972
+          },
+          "stationary_tcp_error_mm": {
+            "mean": 0.6589915191379392,
+            "median": 0.4080511055291587,
+            "p95": 2.1088279274256028,
+            "max": 3.4399010282432263,
+            "rmse": 0.9521055677358122
+          },
+          "stationary_tcp_speed_mm_s": {
+            "mean": 1.8274412997445832,
+            "median": 1.158276999115686,
+            "p95": 5.817484265121585,
+            "max": 9.417427110674032,
+            "rmse": 2.6266849617026606
+          },
+          "peak_velocity_rad_s": 0.15804192648729148,
+          "peak_observed_velocity_rad_s": 0.11643988454033802,
+          "peak_acceleration_rad_s2": 0.5000000000000109,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.32,
+          "minimum_model_margins": {
+            "joint": 1.5054216109888605,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007318901588746762
+          },
+          "solver_ms": {
+            "mean": 6.203274842854236,
+            "median": 6.143600500308821,
+            "p95": 7.46111460011889,
+            "max": 11.622668999734742,
+            "rmse": 6.274471957513329
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        }
+      ],
+      "urdf_sha256": "3224acffd7a88170fc9ff4520ef67e8617d658b4f5d9f65925a846cf3d4ca84a",
+      "simulation": {
+        "model": "UR10e",
+        "backend": "mujoco",
+        "version": "3.15.0",
+        "model_xml_sha256": "fc50163a7d83af12d950bddc4df7ff61817895540922a40d23b5855f372888d3",
+        "model_source_commit": "e4049d0a3bfd58d2a3081614e6777d4007e3f86a",
+        "gravity_compensation": true,
+        "original_base_quaternion_wxyz": [
+          0.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "frame": "robot_base",
+        "scope": "bare arm and configured floor"
+      }
+    },
+    {
+      "name": "ramp",
+      "scenario": "ramp",
+      "source_session": "27daacc0ad084015b4bb409853ec7fda",
+      "source_episode": "2026-10-06_11-15-00",
+      "source_log_sha256": "4a19bc114cdc3ca4cd008864cfcd41b61f06fa2a81a828cf5a724a445dd29a7d",
+      "source_manifest_sha256": "37489cc924f0a92b7bfd2be3f0e2d437fd993eac2cea8287482c5eda0c4cdeaa",
+      "inputs_sha256": "2df18e50a1b899dd6bc03364c45ad13c4334ac52360fadec8435ea6342cf1b17",
+      "samples": 350,
+      "duration_s": 6.98,
+      "variants": [
+        {
+          "name": "gain=6",
+          "tuning": {
+            "position_gain": 6.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 350,
+          "tcp_error_mm": {
+            "mean": 7.906105844619366,
+            "median": 7.699420202675151,
+            "p95": 14.945897607989505,
+            "max": 15.939296691131553,
+            "rmse": 8.83893218361256
+          },
+          "stationary_tcp_error_mm": {
+            "mean": 5.7931233578223225,
+            "median": 5.656027503274217,
+            "p95": 8.467360033800496,
+            "max": 9.18654074503881,
+            "rmse": 5.953216671902302
+          },
+          "stationary_tcp_speed_mm_s": {
+            "mean": 6.379027243188364,
+            "median": 6.202448556773073,
+            "p95": 9.262354382674646,
+            "max": 10.01582749503592,
+            "rmse": 6.549111389283595
+          },
+          "peak_velocity_rad_s": 0.03728625003018639,
+          "peak_observed_velocity_rad_s": 0.03427457847092438,
+          "peak_acceleration_rad_s2": 0.2648787753559914,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.0,
+          "minimum_model_margins": {
+            "joint": 1.5087165597136394,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007318451277194167
+          },
+          "solver_ms": {
+            "mean": 6.141274254254573,
+            "median": 6.096091499784961,
+            "p95": 6.637113500710257,
+            "max": 9.731727999678697,
+            "rmse": 6.153100950313491
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=10",
+          "tuning": {
+            "position_gain": 10.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 350,
+          "tcp_error_mm": {
+            "mean": 5.754847658442113,
+            "median": 5.7756266313506295,
+            "p95": 10.469345884950814,
+            "max": 10.747630071571194,
+            "rmse": 6.503411384884964
+          },
+          "stationary_tcp_error_mm": {
+            "mean": 2.5491002715072426,
+            "median": 2.4522220777927917,
+            "p95": 3.7225037705466693,
+            "max": 4.248904412996638,
+            "rmse": 2.645207353015038
+          },
+          "stationary_tcp_speed_mm_s": {
+            "mean": 4.719113834443021,
+            "median": 4.555353509690494,
+            "p95": 6.8141277599056105,
+            "max": 7.744005275329903,
+            "rmse": 4.8845490007094785
+          },
+          "peak_velocity_rad_s": 0.041167458878824836,
+          "peak_observed_velocity_rad_s": 0.03825281231358669,
+          "peak_acceleration_rad_s2": 0.4358473901933929,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.0,
+          "minimum_model_margins": {
+            "joint": 1.502198833807677,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007318451075057353
+          },
+          "solver_ms": {
+            "mean": 6.1729071742800965,
+            "median": 6.097674999637093,
+            "p95": 6.732914199665174,
+            "max": 10.525575999963621,
+            "rmse": 6.183124809296704
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        },
+        {
+          "name": "gain=15",
+          "tuning": {
+            "position_gain": 15.0,
+            "orientation_gain": 4.0,
+            "damping": 0.0001,
+            "acceleration_weight": 0.001
+          },
+          "passed": true,
+          "samples": 350,
+          "tcp_error_mm": {
+            "mean": 4.106466193931296,
+            "median": 4.393115507291544,
+            "p95": 7.294926841441533,
+            "max": 7.340989494979675,
+            "rmse": 4.776791765328593
+          },
+          "stationary_tcp_error_mm": {
+            "mean": 0.949493255647353,
+            "median": 0.8598016928846232,
+            "p95": 1.6252533741727169,
+            "max": 1.79074150020437,
+            "rmse": 1.023148693781889
+          },
+          "stationary_tcp_speed_mm_s": {
+            "mean": 2.6625365533080694,
+            "median": 2.490040130349247,
+            "p95": 4.494831123821238,
+            "max": 4.91416458396934,
+            "rmse": 2.854031014621661
+          },
+          "peak_velocity_rad_s": 0.042007648319626,
+          "peak_observed_velocity_rad_s": 0.03911848299570623,
+          "peak_acceleration_rad_s2": 0.5000000000000001,
+          "velocity_bound_fraction": 0.0,
+          "acceleration_bound_fraction": 0.02,
+          "minimum_model_margins": {
+            "joint": 1.5000361055095037,
+            "floor": 0.09899872876405716,
+            "collision": 0.0007318451681566814
+          },
+          "solver_ms": {
+            "mean": 6.303479128603483,
+            "median": 6.176669000524271,
+            "p95": 6.917976150270988,
+            "max": 12.998902000617818,
+            "rmse": 6.327563362371529
+          },
+          "checks": {
+            "all_samples_completed": true,
+            "velocity_bound": true,
+            "acceleration_bound": true,
+            "observed_velocity_bound": true,
+            "sampled_model_margins": true
+          }
+        }
+      ],
+      "urdf_sha256": "3224acffd7a88170fc9ff4520ef67e8617d658b4f5d9f65925a846cf3d4ca84a",
+      "simulation": {
+        "model": "UR10e",
+        "backend": "mujoco",
+        "version": "3.15.0",
+        "model_xml_sha256": "fc50163a7d83af12d950bddc4df7ff61817895540922a40d23b5855f372888d3",
+        "model_source_commit": "e4049d0a3bfd58d2a3081614e6777d4007e3f86a",
+        "gravity_compensation": true,
+        "original_base_quaternion_wxyz": [
+          0.0,
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "frame": "robot_base",
+        "scope": "bare arm and configured floor"
+      }
+    }
+  ]
+}

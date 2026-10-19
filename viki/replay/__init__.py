@@ -15,6 +15,7 @@ from viki.replay.ur import UR10eDriver, inspect_ur10e
 from viki.replay.manager import ReplayManager
 from viki.replay.simulation import preview_mujoco
 from viki.replay.live import LiveController
+from viki.replay.benchmark import benchmark_live_ik
 
 __all__ = [
     "replay_episode",
@@ -30,4 +31,5 @@ __all__ = [
     "ReplayManager",
     "preview_mujoco",
     "LiveController",
+    "benchmark_live_ik",
 ]
