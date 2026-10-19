@@ -119,6 +119,31 @@ services:
     entrypoint: ["/app/docker/entrypoint.sh"]
     command: ["uvicorn", "viki.server.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
+  live-hand:
+    <<: *live
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ur
+      target: live-hand
+      network: host
+    image: viki-live-hand
+    volumes:
+      - /dev:/dev
+      - /run/udev:/run/udev:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ./viki:/app/viki
+      - ./tests:/app/tests
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+      - ./models:/app/models
+      - type: bind
+        source: ${DG5F_HYBRID_ROOT:-../hand_hybryd_retargeting/dg5f_camera_demo}
+        target: /opt/dg5f-hybrid
+        read_only: true
+        bind:
+          create_host_path: false
+    command: ["live-hand", "--help"]
+
   live-test:
     <<: *live
     build:

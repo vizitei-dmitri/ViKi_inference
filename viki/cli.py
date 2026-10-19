@@ -356,6 +356,11 @@ def _cmd_live(a) -> None:
     run_live_cli(a)
 
 
+def _cmd_live_hand(a) -> None:
+    from viki.live import run_hand_cli
+    run_hand_cli(a)
+
+
 def _cmd_label(a) -> None:
     from viki.contracts import EpisodeLabels
     from viki.labeling import load_labels, save_labels
@@ -746,6 +751,19 @@ def _build_parser() -> argparse.ArgumentParser:
     pmp.add_argument("--video-fps", type=int, default=20)
     pmp.add_argument("--playback-speed", type=float, default=1, help="viewer/video speed; does not change simulated dynamics")
     pmp.set_defaults(func=_cmd_preview)
+
+    hand = sub.add_parser("live-hand", help="causal camera 21-point hand -> original DG5F Hybrid -> finger preview")
+    hand.add_argument("--reference", required=True)
+    hand.add_argument("--source", choices=("recorded","cameras"), default="recorded")
+    hand.add_argument("--hybrid-root", default="/opt/dg5f-hybrid")
+    hand.add_argument("--seconds", type=float, default=60.)
+    hand.add_argument("--perception-hz", type=float, default=15.)
+    hand.add_argument("--input-ttl", type=float, default=.25)
+    hand.add_argument("--filter-beta", type=float, default=30.)
+    hand.add_argument("--out", default="data/live_hand_sessions")
+    hand.add_argument("--gui", action="store_true")
+    hand.add_argument("--video", action="store_true", help="save kinematic preview MP4/PNG; no dynamics")
+    hand.set_defaults(func=_cmd_live_hand)
 
     pli = sub.add_parser("live", help="causal cameras/recorded RGB-D -> hand pose -> MuJoCo/UR10e")
     pli.add_argument("--reference", required=True, help="episode containing camera factory calibration/extrinsics")

@@ -50,3 +50,10 @@ FROM live AS live-test
 RUN --mount=type=cache,target=/root/.cache/pip pip install "pytest>=8" httpx
 ENTRYPOINT ["/app/docker/entrypoint.sh", "pytest"]
 CMD ["tests/", "-q"]
+
+# Optional dexterous-hand dependency set. The user's Hybrid source and DG5F
+# model are mounted read-only by Compose, never copied into ViKi or rewritten.
+FROM live AS live-hand
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --index-url https://download.pytorch.org/whl/cpu "torch==2.10.0" && \
+    pip install "dex-retargeting==0.5.0" "nlopt==2.9.1" "pytest>=8" httpx

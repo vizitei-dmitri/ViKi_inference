@@ -315,33 +315,13 @@ class LiveSession:
             self._write_json("session.json", metadata)
 
     def _start_reference_cameras(self, manager, devices):
-        meta = json.loads((Path(self.config.reference) / "meta.json").read_text())
-        kinect = [d for d in devices if d.startswith("kinect_")]
-        if len(kinect) >= 2:
-            request = meta["cameras"][kinect[0]]["requested"]
-            manager.start_configured_kinect_rig(**{
-                k: request[k] for k in ("fps", "color_width", "color_height", "depth_mode")})
-        for device in devices:
-            if device in kinect and len(kinect) >= 2:
-                continue
-            request = meta["cameras"][device].get("requested", {})
-            manager.start(device, **{k: request[k] for k in ("fps", "color_width", "color_height", "depth_mode") if k in request})
+        from .sources import start_reference_cameras
+        start_reference_cameras(self.config.reference, manager, devices)
 
     def _wait_cameras(self, manager, devices):
-        from viki.cameras import HardwareSyncError
-        end = time.monotonic() + 8
-        last_error = "no frames"
-        while time.monotonic() < end and not self._stop.is_set():
-            if all(manager.latest_frame(d) is not None for d in devices):
-                try:
-                    manager.require_hardware_sync_ready()
-                    return
-                except HardwareSyncError as exc:
-                    last_error = str(exc)
-            self._stop.wait(.05)
-        if self._stop.is_set():
-            return
-        raise RuntimeError("live camera synchronization not ready: " + last_error)
+        from .sources import wait_reference_cameras
+        if not self._stop.is_set():
+            wait_reference_cameras(manager, devices, self._stop)
 
     def _write_json(self, name, value):
         path = self.directory / name

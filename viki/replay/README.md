@@ -1,5 +1,10 @@
 # viki.replay — trajectory execution
 
+`DG5FHandPreview` is a separate **kinematic** finger display for `live-hand`:
+canonical 20-joint positions, explicit MuJoCo joint-range clipping, `mj_forward`.
+It is not a force/contact/actuator simulation and opens no hardware connection.
+Target radians and actually displayed radians are logged separately.
+
 **Stage 5** · `plan.h5` → `replay.h5` · paper §3.8
 
 Execute the synthesised joint trajectory and record measured arm states.

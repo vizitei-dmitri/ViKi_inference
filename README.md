@@ -184,6 +184,12 @@ Run one web service on port 8000. See the [live instructions](docs/live_human_ru
 for live cameras, coordinate registration and UR10e bring-up. The independent
 MuJoCo display can render slowly without changing the execution frequency.
 
+For **DG5F fingers only**, the separate `live-hand` mode connects the camera
+landmarks to the existing Hybrid Vector/DexPilot implementation from your hand
+project. It provides kinematic finger preview with recorded or live camera
+input; see [the DG5F guide](docs/live_dg5f_hand.md). Physical DG5F execution is
+not exposed in this first integration.
+
 The **Online review** tab combines source point clouds, logged online hand
 estimates and measured MuJoCo arm motion on one timeline. It preserves inference
 delay, invalid observations and binding losses. See the

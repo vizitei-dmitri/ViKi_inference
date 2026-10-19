@@ -1,5 +1,15 @@
 # `viki.retarget` — calibrated poses to a robot plan
 
+The separate public `DG5FHandRetargeter` accepts current `LiveHandEstimate`
+21-point observations and calls the user's unchanged portable Hybrid solver
+from `hand_hybryd_retargeting/dg5f_camera_demo`. It keeps the original MANO
+conversion, scaling, Vector/DexPilot correction and fixed pinky-joint map.
+It rejects missing, old or out-of-order observations and resets solver history
+after observation loss. Output `HandJointTarget` is in canonical DG5F joint
+order and radians. No inferred finger points or arm IK enter this path.
+The external source/assets are mounted read-only by the `live-hand` service;
+hashes are retained per session. See [finger live guide](../../docs/live_dg5f_hand.md).
+
 The episode planner below remains offline. The public `OnlineRetargeter` in
 `online.py` provides a separate persistent bare UR10e/tool0 model for
 `viki.live`: measured-state FK/Jacobians, six-variable differential QP,

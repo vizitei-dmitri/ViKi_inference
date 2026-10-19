@@ -238,6 +238,21 @@ class LiveHandFitEstimate:
     converged: bool = False
 
 
+@dataclass
+class HandJointTarget:
+    """Canonical DG5F joint target; radians, source-clock freshness, no arm pose."""
+
+    sequence: int
+    source_time_us: int
+    valid_until_us: int
+    joint_names: tuple[str, ...]
+    q_rad: np.ndarray
+    contact_weights: np.ndarray
+    fingertip_distances_m: np.ndarray
+    valid: bool
+    reason: str = ""
+
+
 @dataclass(frozen=True)
 class LiveIKTuning:
     """Objective tuning; joint, acceleration and collision bounds stay separate."""

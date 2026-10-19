@@ -16,6 +16,7 @@ from viki.replay.manager import ReplayManager
 from viki.replay.simulation import preview_mujoco
 from viki.replay.live import LiveController
 from viki.replay.benchmark import benchmark_live_ik
+from viki.replay.hand_preview import DG5FHandPreview
 
 __all__ = [
     "replay_episode",
@@ -32,4 +33,5 @@ __all__ = [
     "preview_mujoco",
     "LiveController",
     "benchmark_live_ik",
+    "DG5FHandPreview",
 ]
