@@ -5,6 +5,7 @@ import { api, log, sessionGet, sessionSet, sessionPatch } from './core.js';
 import * as scene3d from './scene3d.js';
 
 let root = null, ctl = null, episodes = [], variants = [];
+let loadSerial = 0;
 
 export function mount(view) {
   const vs = sessionGet('viewer', { color: 'rgb', stride: 1 });
@@ -69,6 +70,7 @@ export function mount(view) {
 }
 
 export function unmount() {
+  loadSerial += 1;
   ctl?.dispose();
   ctl = null;
   root?.remove();
@@ -86,6 +88,7 @@ async function loadEpisodes() {
 }
 
 async function openEpisode(id) {
+  const serial = ++loadSerial;
   const status = root.querySelector('[data-role="status"]');
   const build = root.querySelector('[data-role="build"]');
   if (!id) {
@@ -97,6 +100,7 @@ async function openEpisode(id) {
     const response = await api('GET', `/api/pipeline/episode/${id}/geometry/variants`);
     variants = response.variants || [];
   } catch { variants = [{ id: 'active', label: 'active' }]; }
+  if (serial !== loadSerial || !root) return;
   const variantPicker = root.querySelector('[data-role="variant"]');
   variantPicker.innerHTML = variants.map(v =>
     `<option value="${v.id}">${v.label}</option>`).join('');
@@ -105,15 +109,26 @@ async function openEpisode(id) {
 }
 
 async function openVariant(id, variant) {
+  const serial = ++loadSerial;
+  const controller = ctl;
   const status = root.querySelector('[data-role="status"]');
   const build = root.querySelector('[data-role="build"]');
   status.textContent = 'loading variant…';
-  const r = await ctl.loadEpisode(id, episodes, variant);
+  const [r, plan] = await Promise.all([
+    controller.loadEpisode(id, episodes, variant),
+    api('GET', `/api/pipeline/episode/${id}/retarget`).catch(e => {
+      log('viewer robot plan: ' + e, 'warn');
+      return null;
+    }),
+  ]);
+  if (serial !== loadSerial || controller !== ctl || !root) return;
+  controller.setRetargetData(plan);
   setPlayIcon(false);
   build.hidden = r.hasCloud;
   const g = r.geo || {};
   const source = [g.fusion_mode, g.checkpoint_stage, g.pose_source].filter(Boolean).join(' · ');
-  const sourceLabel = source ? ` · ${source}` : '';
+  const sourceLabel = (source ? ` · ${source}` : '')
+    + (plan?.ready ? ' · saved offline robot plan' : '');
   const objectLabel = r.hasObjectModel
     ? ` · object model ${r.ometa.objects.length}` : '';
   status.textContent = r.hasCloud

@@ -28,13 +28,16 @@ segment    perception/   raw/        ->  intermediates/segmentation/  masks + se
 object     perception/   segmentation -> object_models.npz  rigid core/shell + pose/confidence
 retarget   retarget/     cln.npz     ->  plan.h5     targets -> adapter -> TCP -> robot joints
 object-rel object_centric.py  object_models.npz + cln.npz + plan.h5 -> intermediates/object_relative.npz
-replay     replay/       plan.h5     ->  replay.h5   proprioception on hardware        [stub]
+replay     replay/       plan.h5     ->  replay.h5   UR10e arm-only RTDE + execution logs
 label      labeling.py   ->  meta.json["labels"]     task / phase segments / outcome
 export     export/       episodes/*  ->  datasets/<name>/
 ```
 
-**There is no live pipeline.** Record scenes first, then extract/prepare/retarget
-offline. `data/` and `models/` are gitignored — no recordings, calibration, URDFs
+The offline pipeline remains episode-based. A separate `live/` session branch
+pulls cameras or causally retimed recorded frames → `perception.LiveHandEstimator`
+→ `retarget.OnlineRetargeter` → `replay.LiveController` (MuJoCo / UR10e).
+See [`viki/live/README.md`](viki/live/README.md); no offline profile is reused as
+an online filter. `data/` and `models/` are gitignored — no recordings, calibration, URDFs
 or weights are in the repository.
 
 ---
@@ -54,9 +57,11 @@ docker compose run --rm test              # full test suite
 docker compose run --rm cli <verb> ...    # one pipeline stage (viki <verb> ...)
 ```
 
-One `docker-compose.yml` defines the normal `viki` image plus a dedicated
-`sam2` CUDA image for scene perception. `web` starts on `up`; `test`, `cli`,
-`terminal`, and `sam2` are tools-profile services meant for `run`. `test` and
+One `docker-compose.yml` defines the normal `viki` image, a dedicated
+`sam2` CUDA image for scene perception, the CPU-only `ur` replay image and
+the offline MuJoCo `preview` image.
+`web` starts on `up`; `test`, `cli`, `terminal`, `sam2`, `ur` and `preview` are
+tools-profile services meant for `run`. `test` and
 `cli` append their args to `pytest` / `viki`.
 
 The server serves UI + API at `http://localhost:8000` (`network_mode: host`).
@@ -76,7 +81,9 @@ viki record   ...                 # capture a synced RGB-D scene into a new epis
 viki extract  <episode>           # raw/ -> rec.npz
 viki prepare  <episode>           # rec.npz -> cln.npz
 viki retarget <episode>           # cln.npz -> plan.h5
-viki replay   <episode>           # plan.h5 -> replay.h5            [stub]
+viki replay   <episode>           # plan.h5 -> replay.h5 (dryrun by default; UR10e arm-only)
+viki live --reference <episode>   # recorded/cameras -> causal hand -> MuJoCo/UR10e
+viki preview  <episode> --model <scene.xml>  # offline MuJoCo; --gui starts paused
 viki label    <episode> ...       # get/set episode labels
 viki export   <episode>... --out <dir> [--format trajectory|lerobot]
 viki run      <episode>           # extract -> prepare -> [scene] -> retarget -> replay
@@ -123,7 +130,7 @@ the authoritative list.
 
 ## Package map
 
-Nine packages under `viki/`, **each with its own README — read those**, they carry
+Ten packages under `viki/`, **each with its own README — read those**, they carry
 hardware quirks and API tables not repeated here.
 
 | package | role |
@@ -133,7 +140,8 @@ hardware quirks and API tables not repeated here.
 | `perception/` | raw/ → rec.npz: detection, multi-view triangulation, backends, hand fit |
 | `prepare/` | rec.npz → cln.npz: interpolate, fuse, Savitzky–Golay, EE pose, gripper |
 | `retarget/` | cln.npz → plan.h5: PINK / Pinocchio whole-trajectory IK |
-| `replay/` | plan.h5 → replay.h5 — **stub**, contract-complete only |
+| `replay/` | plan.h5 → replay.h5 + execution logs; UR10e arm-only, hardware validation pending |
+| `live/` | per-session supervision of causal perception and isolated arm executor, CLI / optional display |
 | `export/` | episodes → dataset: trajectory bundle (works) and LeRobot (partial) |
 | `render/` | pure pixel work — depth colourise, MJPEG, matplotlib. No FastAPI, no hardware |
 | `server/` | transport only: FastAPI over the offline stages + camera preview |
@@ -174,10 +182,11 @@ All mounted under `/api`. Router ↔ stage mapping, since it is easy to guess wr
 | prefix | what |
 |---|---|
 | `/api/cameras`, `/api/calibration`, `/api/record` | live hardware: preview, calibration, capture |
-| `/api/skeleton` | live hand estimation (preview only — not a pipeline stage) |
+| `/api/skeleton` | capture static background depth for offline scene subtraction |
+| `/api/live` | causal hand observation / following sessions, explicit bind/clutch/stop |
 | `/api/pipeline` | the offline stages: extract → prepare, job queue, episode artifacts, cloud |
 | `/api/episodes`, `/api/datasets` | episode + dataset listing, retarget jobs and viz |
-| `/api/export`, `/api/label`, `/api/replay`, `/api/models` | export, labels, replay stub, model registry |
+| `/api/export`, `/api/label`, `/api/replay`, `/api/models` | export, labels, replay checks/UR10e arm-only jobs, model registry |
 
 ## Adding a tunable
 

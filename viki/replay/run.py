@@ -1,29 +1,20 @@
-"""
-viki.replay.run
----------------
-Pipeline stage 5: plan.h5 -> replay.h5 (paper §3.8).
-
-Execute the synthesised joint trajectory, log what the robot actually attained,
-screen for feasibility, and — on rejection — optionally re-solve retargeting
-with modified weights (bounded).
-
-STUB stage: with ``driver="dryrun"`` no hardware is touched and the verdict is
-``dry-run``. ``driver="ur3"`` raises unless ``ur-rtde`` and the robot are present.
-The re-solve loop is not implemented (``max_resolves`` is accepted but ignored).
-"""
+"""plan.h5 -> replay.h5 plus immutable control-rate execution logs (§3.8)."""
 
 from __future__ import annotations
 
-import logging
+from dataclasses import asdict
+from datetime import datetime, timezone
 import json
-
-import numpy as np
+import logging
+import uuid
 
 from viki.contracts import Episode, REPLAY_KEYS
-from viki.episode import mark_stage
+from viki.episode import clear_stage, mark_stage
 from viki.replay.driver import load_driver
-from viki.replay.screen import screen
-from viki.retarget.archive import load_archive, write_hdf5_archive
+from viki.replay.plan import URReplayOptions, check_ur_plan, read_plan
+from viki.replay.screen import Verdict, screen
+from viki.replay.ur import ReplayAborted
+from viki.retarget import write_hdf5_archive
 
 logger = logging.getLogger(__name__)
 
@@ -33,82 +24,85 @@ def replay_episode(
     *,
     driver: str = "dryrun",
     max_resolves: int = 0,
+    host: str | None = None,
+    options: URReplayOptions | None = None,
+    stop_event=None,
 ) -> str:
-    """Run replay for one episode and write ``replay.h5``. Returns the path."""
-    if not ep.plan_h5.exists():
-        raise FileNotFoundError(f"no plan.h5 for episode {ep.id}; run retarget first")
+    """Execute a prepared plan. Hardware errors retain a rejected partial log."""
+    if max_resolves:
+        raise NotImplementedError("replay re-solve loop is not implemented (paper §3.8)")
+    plan = read_plan(ep)
+    hardware = driver == "ur10e"
+    settings = options or URReplayOptions()
+    if hardware:
+        report = check_ur_plan(plan, settings)
+        drv = load_driver(driver, host=host, options=settings, stop_event=stop_event)
+    else:
+        if host is not None or options is not None:
+            raise ValueError("host/options apply only to driver='ur10e'")
+        report = {}
+        drv = load_driver(driver)
 
-    with load_archive(ep.plan_h5) as plan:
-        q_plan = np.asarray(plan["q"], dtype=np.float64)
-        q_approach = np.asarray(
-            plan["q_approach"] if "q_approach" in plan else np.empty((0, q_plan.shape[1])),
-            dtype=np.float64,
-        )
-        dt = float(plan["dt"])
-        robot = str(plan["robot"])
-        command = np.asarray(plan["gripper_command"], dtype=np.float64)
-        gripper_model = str(plan["gripper_model"])
-        command_names = (
-            json.loads(str(plan["gripper_command_names_json"]))
-            if "gripper_command_names_json" in plan else []
-        )
-    if command.shape != (len(q_plan), 1):
-        raise ValueError(
-            f"the current replay driver accepts one-dimensional gripper "
-            f"commands, got {gripper_model!r} {command.shape}"
-        )
-    # V3 and older plans encoded ``closed`` (1 closed). V4 encodes normalised
-    # ``opening`` (0 closed, 1 open). Drivers only see the current convention.
-    legacy_closed = command_names == ["closed"] or (
-        not command_names and gripper_model == "binary"
-    )
-    gripper = 1.0 - command[:, 0] if legacy_closed else command[:, 0]
-    if not np.isfinite(gripper).all() or np.any(gripper < 0.0) or np.any(gripper > 1.0):
-        raise ValueError("gripper command must be a normalised opening in [0, 1]")
-    if q_approach.ndim != 2 or q_approach.shape[1:] != q_plan.shape[1:]:
-        raise ValueError("q_approach must have the same joint dimension as q")
-    approach_gripper = np.full(
-        len(q_approach),
-        gripper[0] if len(gripper) else 1.0,
-        dtype=np.float64,
-    )
-    q_execute = np.concatenate((q_approach, q_plan), axis=0)
-    gripper_execute = np.concatenate((approach_gripper, gripper), axis=0)
-
-    drv = load_driver(driver)
+    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid.uuid4().hex[:12]
+    log_path = ep.root / "intermediates" / "replay" / run_id / "execution.h5"
+    clear_stage(ep, "replay")
+    clear_stage(ep, "export")
+    error = None
     try:
-        execution_log = drv.execute(q_execute, gripper_execute, dt)
+        execution_log = drv.execute(plan.q, plan.gripper, plan.dt)
+    except ReplayAborted as exc:
+        execution_log, error = exc.log, exc
     finally:
         drv.close()
 
-    if len(execution_log.q_attained) != len(q_execute):
+    completed = error is None
+    if completed and len(execution_log.q_attained) != len(plan.q):
         raise RuntimeError("replay driver returned a trajectory with the wrong length")
-    approach_frames = len(q_approach)
-    q_attained = np.asarray(execution_log.q_attained)[approach_frames:]
-    gripper_attained = np.asarray(execution_log.gripper_attained)[approach_frames:]
-    controller_residual = np.asarray(execution_log.controller_residual)[approach_frames:]
+    effective_dt = plan.dt / settings.speed_scale if hardware else plan.dt
+    v = (
+        Verdict("test-stop" if error.intentional else "reject", str(error)) if error else
+        screen(execution_log.q_attained, execution_log.controller_residual, plan.robot,
+               residual_threshold=settings.tracking_tolerance if hardware else 0.05)
+    )
+    if hardware and settings.arm_only and v.verdict == "pass":
+        v = Verdict("arm-only", "")
 
-    if max_resolves:
-        logger.warning("replay re-solve loop is not implemented (paper §3.8, Fig. 3.1)")
-
-    # Screen the complete executed motion, including the transition from home.
-    v = screen(execution_log.q_attained, execution_log.controller_residual, robot)
-
+    # Full motion including the approach, never conflated with source video.
+    values = {
+        "schema_version": 1, "driver": driver, "hardware": hardware,
+        "completed": completed, "verdict": v.verdict, "rejection_cause": v.cause,
+        "plan_sha256": plan.sha256, "source_dt": plan.dt, "dt": effective_dt,
+        "robot": plan.robot, "approach_frames": plan.approach_frames,
+        "q_source": plan.q, "gripper_command_source": plan.gripper,
+        "q_attained_source_frames": execution_log.q_attained,
+        "gripper_attained_source_frames": execution_log.gripper_attained,
+        "controller_residual_source_frames": execution_log.controller_residual,
+        "options_json": json.dumps(asdict(settings) if hardware else {}),
+        "identity_json": json.dumps(getattr(drv, "identity", {})),
+        "preflight_json": json.dumps(report),
+        **execution_log.telemetry,
+    }
+    write_hdf5_archive(log_path, values, schema="viki_execution_hdf5_v1")
+    approach = plan.approach_frames
     archive = {
-        # Keep replay.h5 aligned one-to-one with the demonstrated frames used by
-        # export. The approach was executed and screened above, but has no human
-        # observation/annotation counterpart.
-        "q_attained": q_attained,
-        "gripper_attained": gripper_attained,
-        "controller_residual": controller_residual,
-        "verdict": v.verdict,
-        "rejection_cause": v.cause,
-        "resolve_attempts": 0,
-        "robot": robot,
-        "dt": dt,
+        "q_attained": execution_log.q_attained[approach:],
+        "gripper_attained": execution_log.gripper_attained[approach:],
+        "controller_residual": execution_log.controller_residual[approach:],
+        "verdict": v.verdict, "rejection_cause": v.cause, "resolve_attempts": 0,
+        "robot": plan.robot, "dt": effective_dt, "source_dt": plan.dt,
+        "driver": driver, "hardware": hardware, "completed": completed,
+        "gripper_measured": False,  # dryrun echoes; arm-only has no sensor
+        "plan_sha256": plan.sha256,
+        "execution_log": str(log_path.relative_to(ep.root)),
     }
     assert set(archive) == set(REPLAY_KEYS)
     write_hdf5_archive(ep.replay_h5, archive)
-    mark_stage(ep, "replay", verdict=v.verdict, rejection_cause=v.cause, driver=driver)
-    logger.info("replay %s: verdict=%s cause=%s", ep.id, v.verdict, v.cause or "-")
+    mark_stage(
+        ep, "replay", done=completed, verdict=v.verdict, rejection_cause=v.cause,
+        driver=driver, hardware=hardware, completed=completed, gripper_measured=False,
+        execution_log=archive["execution_log"], plan_sha256=plan.sha256,
+    )
+    logger.info("replay %s: verdict=%s log=%s", ep.id, v.verdict, log_path)
+    if error and not error.intentional:
+        raise RuntimeError(f"UR replay aborted: {error}; partial log: {log_path}") from error
     return str(ep.replay_h5)

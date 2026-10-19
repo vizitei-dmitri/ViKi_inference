@@ -1,11 +1,16 @@
-# Single compose file. One image (Dockerfile `test` target = base + pytest),
-# five services:
+# Single compose file. Main image (Dockerfile `test` target = base + pytest),
+# optional SAM image, and CPU replay / MuJoCo / live images;
 #
 #   web       docker compose up                       -> FastAPI on :8000
 #   test      docker compose run --rm test [args]      -> pytest tests/ (args append)
 #   cli       docker compose run --rm cli <verb> ...   -> `viki <verb> ...`
 #   terminal  docker compose run --rm terminal         -> bash, for manual poking
 #   sam2      docker compose run --rm sam2 <args>       -> optional SAM 2.1 image
+#   ur        docker compose run --rm ur <args>         -> CPU-only RTDE replay
+#   preview   docker compose run --rm preview <args>    -> offline MuJoCo preview
+#   live      docker compose run --rm live live <args>  -> causal hand-following CLI
+#   live-web  docker compose run --rm live-web          -> CPU live UI on :8000
+#   live-test docker compose run --rm live-test         -> hardware-independent suite
 #
 # Only `web` starts on `up`; the rest sit behind the `tools` profile and are
 # meant for `run`.
@@ -17,7 +22,6 @@ x-common: &common
     target: test
   image: viki
   network_mode: host
-  gpus: all                      # host NVIDIA GPU for model inference (nvidia-container-toolkit)
   # ── resource ceilings ──────────────────────────────────────────────────────
   # The box is 16 core / 15 GiB / 4 GiB swap. Without caps a runaway (an
   # unpinned BLAS solve, a leak) takes the bare host down and systemd-oomd kills
@@ -82,15 +86,104 @@ x-common: &common
     - /dev/dri:/dev/dri
 
 services:
+  live: &live
+    <<: *common
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ur
+      target: live
+      network: host
+    image: viki-live
+    restart: "no"
+    profiles: ["tools"]
+    mem_limit: 5g
+    memswap_limit: 5g
+    cpus: "6"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - DISPLAY=${DISPLAY}
+      - GIT_PYTHON_REFRESH=quiet
+      - OMP_NUM_THREADS=1
+      - OPENBLAS_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - MUJOCO_GL=glfw
+      - LIBGL_ALWAYS_SOFTWARE=1
+    stdin_open: true
+    tty: true
+    entrypoint: ["/app/docker/entrypoint.sh", "viki"]
+    command: ["live", "--help"]
+
+  live-web:
+    <<: *live
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: ["uvicorn", "viki.server.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  live-test:
+    <<: *live
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ur
+      target: live-test
+      network: host
+    image: viki-live-test
+    entrypoint: ["/app/docker/entrypoint.sh", "pytest"]
+    command: ["tests/", "-q"]
+
+  ur:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ur
+      target: replay
+    image: viki-ur
+    network_mode: host
+    restart: "no"
+    profiles: ["tools"]
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: "2"
+    pids_limit: 128
+    volumes:
+      - ./viki:/app/viki
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+
   web:
     <<: *common
+    gpus: all
     container_name: viki-web
     restart: unless-stopped
     entrypoint: ["/app/docker/entrypoint.sh"]
     command: ["uvicorn", "viki.server.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
+  preview:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ur
+      target: preview
+    image: viki-preview
+    network_mode: host
+    restart: "no"
+    profiles: ["tools"]
+    mem_limit: 2g
+    memswap_limit: 2g
+    cpus: "4"
+    volumes:
+      - ./viki:/app/viki
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./scripts:/app/scripts:ro
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY}
+      - MUJOCO_GL=glfw
+      - LIBGL_ALWAYS_SOFTWARE=1
+
   test:
     <<: *common
+    gpus: all
     container_name: viki-test
     restart: "no"
     profiles: ["tools"]
@@ -99,6 +192,7 @@ services:
 
   cli:
     <<: *common
+    gpus: all
     container_name: viki-cli
     restart: "no"
     profiles: ["tools"]
@@ -107,6 +201,7 @@ services:
 
   terminal:
     <<: *common
+    gpus: all
     container_name: viki-terminal
     restart: "no"
     profiles: ["tools"]
@@ -117,6 +212,7 @@ services:
 
   sam2:
     <<: *common
+    gpus: all
     build:
       context: .
       dockerfile: docker/Dockerfile

@@ -1,5 +1,16 @@
 # `viki.retarget` — calibrated poses to a robot plan
 
+The episode planner below remains offline. The public `OnlineRetargeter` in
+`online.py` provides a separate persistent bare UR10e/tool0 model for
+`viki.live`: measured-state FK/Jacobians, six-variable differential QP,
+absolute physical winding, command velocity/acceleration and stopping-distance
+bounds, configured floor and all retained self-collision pairs. Near pairs use
+signed FCL distance; cleared pairs use conservative world AABB lower bounds.
+Accepted short segments are checked at start, midpoint and endpoint. These
+sampled model checks do not certify continuous swept volume or real room
+obstacles. `pose`, `model_validate`, `step`, `brake`, `scene` and `manifest` are
+public; each session owns its model state. See [live/README.md](../live/README.md).
+
 The PoC consumes the hand landmarks and palm orientation in `cln.npz` and writes one self-contained
 `plan.h5`. The frame boundary is explicit:
 

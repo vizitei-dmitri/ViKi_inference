@@ -8,6 +8,7 @@ dependencies = [
     "requests>=2.31",
     "opencv-python-headless>=4.9",
     "pin-pink>=4.0",
+    "pin>=3.5",  # native mimic joints used by the physical gripper model
     "pyrealsense2>=2.58",
     "qpsolvers>=4.4",
     "osqp>=0.6",
@@ -22,6 +23,7 @@ dependencies = [
     "threadpoolctl>=3.0",
     "typing_extensions>=4.12",
     "xacrodoc",
+    "ur-rtde>=1.6.3,<2",
 ]
 
 [project.optional-dependencies]
@@ -30,6 +32,9 @@ dev = [
 ]
 export = [
     "lerobot",
+]
+simulation = [
+    "mujoco>=3.3,<4",
 ]
 # RTMPose-Hand backend. rtmlib itself is installed --no-deps in the Dockerfile:
 # it hard-depends on opencv-python, which would collide with the

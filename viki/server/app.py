@@ -26,6 +26,7 @@ from viki.server.routes import (
     datasets,
     export,
     label,
+    live,
     pipeline,
     recording,
     replay,
@@ -50,14 +51,23 @@ _QUIET_PATHS = (
     "/api/system/stats", "/api/health", "/api/pipeline/jobs",
     "/api/calibration/status/", "/api/calibration/samples_count/",
     "/api/record/jobs/", "/api/replay/jobs/", "/api/export/jobs/",
+    "/api/live/status",
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Build the two long-lived objects; stop cameras on shutdown."""
+    """Build shared hardware resources, replay cancellation and live ownership."""
+    from viki.replay import ReplayManager
+    from viki.live import LiveManager, RecordedReviewStore
+    from viki import datasets
+
     app.state.manager = CameraManager()
     app.state.calibrator = CalibrationManager(app.state.manager)
+    app.state.replay_manager = ReplayManager()
+    app.state.live_manager = LiveManager(camera_manager=app.state.manager)
+    app.state.recorded_reviews = RecordedReviewStore(
+        episode_roots=(datasets.datasets_root(), datasets.episodes_root()))
     from viki.calibration import presets as _presets
 
     applied = _presets.apply_active_on_startup()
@@ -65,8 +75,16 @@ async def lifespan(app: FastAPI):
         logging.getLogger(__name__).info("active calibration preset: %s", applied)
     app.state.calibrator.load_all_extrinsics()
     _prefetch_models()
-    yield
-    app.state.manager.stop_all()
+    try:
+        yield
+    finally:
+        try:
+            app.state.live_manager.close()
+        finally:
+            try:
+                app.state.replay_manager.close()
+            finally:
+                app.state.manager.stop_all()
 
 
 # The two models with a working backend — fetched in the background on every
@@ -128,7 +146,7 @@ async def _observe(request: Request, call_next):
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 router = APIRouter(prefix="/api", tags=["api"])
-for mod in (cameras, calibration, skeleton, system, recording, pipeline, replay, label, export):
+for mod in (cameras, calibration, skeleton, system, recording, pipeline, replay, live, label, export):
     router.include_router(mod.router)
 router.include_router(datasets.router)
 router.include_router(datasets.ep_router)

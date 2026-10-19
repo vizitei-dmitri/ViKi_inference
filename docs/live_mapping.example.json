@@ -1,0 +1,8 @@
+{
+  "coordinate_frame": "rig",
+  "confirmed": false,
+  "rotation_robot_rig": [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+  "floor_normal_robot": [0, 0, 1],
+  "floor_offset_m": 0,
+  "source_calibration_id": null
+}

@@ -414,6 +414,15 @@ button.armed { border-color: var(--yellow); color: var(--yellow); }
 }
 .viewer-canvas { position: relative; overflow: hidden; background: #0b0d10; }
 .viewer-canvas canvas { display: block; width: 100%; height: 100%; }
+.review-legend {
+  position: absolute; top: 12px; left: 12px; z-index: 2;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--surface); font-size: 11px;
+}
+.review-legend small { color: var(--muted); }
+.review-tab .review-time { min-width: 300px; white-space: nowrap; }
+.review-tab .live-metrics { margin: 0; }
 
 /* Colour key + layer toggles, one panel pinned into the 3-D scene
    (scene3d.js builds the rows; clicking a row flips that layer). Same overlay
@@ -630,3 +639,42 @@ button.scene-legend-row:focus-visible { outline: 1px solid var(--accent); outlin
 .wiz-crit .crit.bad { color: #f87171; }
 .wiz-crit .crit.green { color: #4ade80; } .wiz-crit .crit.amber { color: #fbbf24; } .wiz-crit .crit.red { color: #f87171; }
 .wiz-crit .crit.warn, .wiz-crit .crit.unknown { color: #fbbf24; }  /* not scored — not the same as wrong */
+
+/* Live observations: input form and two explicitly separate coordinate frames. */
+.live-tab { display: grid; grid-template-columns: 340px minmax(0, 1fr); height: 100%; min-height: 0; }
+.live-sidebar { padding: 16px; overflow: auto; border-right: 1px solid var(--border); background: var(--surface); }
+.live-sidebar h2 { font-size: 14px; margin-bottom: 10px; }
+.live-status { padding: 9px 0; color: var(--muted); font-weight: 600; }
+.live-status.active { color: var(--green); }
+.live-status.bad, .live-error { color: var(--red); }
+.live-nav-state { font-size: 10px; color: var(--yellow); }
+.live-nav-state.active { color: var(--green); }
+.live-nav-state.bad { color: var(--red); }
+.live-field { display: flex; flex-direction: column; gap: 5px; margin: 9px 0; min-width: 0; }
+.live-field input, .live-field select { width: 100%; min-width: 0; }
+.live-form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.live-check { display: flex; align-items: center; gap: 7px; margin: 10px 0; }
+.live-hardware { border: 1px solid var(--border); padding: 0 10px; margin: 10px 0; }
+.live-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 9px; }
+.live-sidebar p { line-height: 1.5; margin: 6px 0; }
+.live-error { white-space: pre-wrap; overflow-wrap: anywhere; padding: 8px 0; font-size: 11px; }
+.live-metrics { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 7px 12px; font-size: 11px; }
+.live-metrics dt { color: var(--muted); }
+.live-metrics dd { overflow-wrap: anywhere; }
+.live-views { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
+.live-view { display: flex; flex-direction: column; min-height: 0; }
+.live-view-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 14px; font-size: 11px; background: var(--surface); }
+.live-view-title b { font-weight: 400; }
+.live-view-title span { color: var(--muted); }
+.live-canvas { flex: 1 1 auto; min-height: 0; overflow: hidden; transition: opacity .2s; }
+.live-canvas.stale { opacity: .4; }
+.live-canvas canvas { display: block; width: 100%; height: 100%; }
+.live-view-help { padding: 8px 14px; }
+@media (min-width: 1400px) {
+  .live-views { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .live-view-help { grid-column: 1 / -1; }
+}
+@media (max-width: 800px) {
+  .live-tab { grid-template-columns: 280px minmax(0, 1fr); }
+  .live-sidebar { padding: 10px; }
+}

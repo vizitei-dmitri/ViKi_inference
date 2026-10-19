@@ -3,14 +3,15 @@ viki.export.run
 ---------------
 Pipeline stage 6: labelled + screened episodes -> one LeRobot dataset.
 
-An episode is eligible when: retarget + replay have run, its replay verdict is
-not ``reject``, its label ``outcome`` is not ``bad``, and it has a non-empty
+An episode is eligible when: retarget + measured replay have run, its replay
+verdict is ``pass``, its label ``outcome`` is not ``bad``, and it has a non-empty
 task string. Camera video is read from ``raw/`` and decimated to ``fps``.
 """
 
 from __future__ import annotations
 
 import logging
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -18,7 +19,7 @@ import numpy as np
 from viki.contracts import Episode, cln_pose_keys
 from viki.episode import read_status, stage_done
 from viki.labeling import load_labels, validate_labels
-from viki.retarget.archive import load_archive
+from viki.retarget import load_archive
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,17 @@ def _eligible(ep: Episode) -> tuple[bool, str]:
     if not stage_done(ep, "replay"):
         return False, "replay not run"
     verdict = read_status(ep).get("stages", {}).get("replay", {}).get("verdict")
-    if verdict == "reject":
-        return False, "replay verdict = reject"
+    if verdict != "pass":
+        return False, f"replay verdict = {verdict}; measured complete replay required"
+    if not ep.replay_h5.is_file() or not ep.plan_h5.is_file():
+        return False, "plan or replay artifact missing"
+    with load_archive(ep.replay_h5) as arc:
+        if not all(key in arc and bool(arc[key]) for key in ("hardware", "completed", "gripper_measured")):
+            return False, "hardware arm and gripper measurements required"
+        if str(arc["verdict"]) != "pass":
+            return False, "replay artifact verdict is not pass"
+        if "plan_sha256" not in arc or str(arc["plan_sha256"]) != hashlib.sha256(ep.plan_h5.read_bytes()).hexdigest():
+            return False, "replay belongs to a different plan"
     labels = load_labels(ep)
     if labels.outcome == "bad":
         return False, "outcome = bad"

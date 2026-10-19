@@ -2,7 +2,7 @@
 
 **Stage 2** · `episodes/<id>/raw/` → `rec.npz`
 
-Offline. Decode the recorded colour + depth, run a pluggable hand-pose backend
+The durable episode stage is offline. Decode the recorded colour + depth, run a pluggable hand-pose backend
 per camera per frame, lift the 2-D detection to 3-D with measured depth,
 transform into the workspace frame with the recorded extrinsics, and write
 per-camera landmark trajectories. Cross-camera fusion is **not** done here — it
@@ -12,17 +12,18 @@ is deferred to `viki.prepare`.
 
 | file | what |
 |---|---|
-| `extract.py` | offline orchestrator: `raw/` → `rec.npz`. Assumes depth aligned to colour (identity colour→depth projector). |
+| `extract.py` | offline extraction: `raw/` → `rec.npz` + raw 2-D observations; uses cached/preset SDK color→depth projection, with a warned identity fallback for legacy recordings |
 | `cloud.py` | offline Viewer cloud fusion with calibrated depth geometry, background subtraction, angular/metric depth-edge rejection, voxel deduplication and workspace crop |
-| `backends/` | `HandPoseBackend` ABC + implementations — see `backends/README.md` |
+| `backends/` | `HandPoseBackend` ABC + implementations; MediaPipe and RTMPose-Hand are implemented, while HaMeR/YOLO remain stubs — see `backends/README.md` |
 | `camera_prep.py` | `prepare_frame` : `Frame` → `PreparedFrame` (RGB, depth in metres, depth K) |
 | `geometry.py` | `lift_to_3d` (2-D + depth → camera-frame 3-D), `camera_landmarks_to_world` (apply extrinsics) |
 | `segmentation.py` | prompted SAM 2.1 video masks and calibrated RGB-D lift |
 | `object_model.py` | core/shell rigid models, robust SE(3) tracks, contact freeze and compact point decisions over a semantic cloud |
 | `scene.py` | resumable episode stage: prompts → masks → semantic cloud → object models |
 | `hand_angles.py` | `compute_end_effector_pose` — the single site that derives the wrist SE(3) pose from landmarks (also used by `prepare`) |
-| `pipeline.py` | `SkeletonPipeline` — per-`SyncedFrameGroup` orchestration (kept for tooling; the offline path is `extract.py`) |
-| `models.py` | compat re-export of the perception DTOs from `viki.contracts` |
+| `observations.py` / `triangulate.py` | stored raw 2-D evidence + multi-camera triangulation with geometric/angular gates |
+| `profiles.py` / `run.py` | immutable named offline recipes and episode perception orchestration; current stable fused-hand recipe is V4 |
+| `live.py` | persistent MediaPipe VIDEO detectors → exact factory color rays → current-frame triangulation → causal XYZ/SO(3) filters; public `LiveHandEstimator` |
 
 ## Contract
 
@@ -44,6 +45,64 @@ spread (INDEX→PINKY), **not** the thumb: `x = norm(MIDDLE_MCP − WRIST)`,
 `z = norm(x × (PINKY_MCP − INDEX_MCP))`, `y = z × x`. Missing a required
 landmark falls back to the centroid of the available palm landmarks with an
 identity rotation.
+
+## Causal live estimation
+
+`LiveHandEstimator.from_episode(reference_episode, landmark_mode="all21")`
+loads the reference's raw factory calibration, camera intrinsics/extrinsics
+and one persistent MediaPipe VIDEO detector per camera. It does not read
+`rec.npz`, `cln.npz`, `plan.h5` or future images, and never modifies the
+reference episode. Model initialization/download happens before processing.
+The public `load_live_geometry` API also exposes the cached calibrated camera
+contexts and their calibration hash without starting devices.
+
+`process(SyncedFrameGroup)` returns a `contracts.LiveHandEstimate` with 21
+rig-frame XYZ slots, direct observation masks, geometric quality, source and
+generation timestamps, pinch-center position, palm rotation and separate
+validity flags. The default solves all 21 landmarks. `landmark_mode="arm7"`
+solves indices `0,1,4,5,8,9,17`; other slots remain NaN/unobserved. Both modes
+still use MediaPipe's 21-landmark detector. `target_anchor="wrist"` selects a
+wrist position instead of the default midpoint of thumb/index fingertips.
+Opening is the metric fingertip distance, not a measured robot tool state.
+The current detector requires a scene containing one intended hand; it does
+not implement multi-person identity association or elbow/shoulder estimation.
+
+The independent live recipe `live-human-sdk-rays-causal-v1` uses this order:
+
+1. Reject duplicate/reversed native camera times, old/non-increasing source
+   times, stale/future arrivals and excessive camera skew before inference.
+   Duplicate/stale frames return `None` and cannot refresh an input timeout.
+2. Run the persistent detectors in native full color image coordinates.
+3. Build exact cached SDK color rays, convert them into ideal pixels, and
+   triangulate with zero distortion so rays are corrected exactly once.
+   Missing factory geometry fails startup; there is no identity fallback.
+   The angular gate is 25 mrad, with a minimum ray angle of 5 degrees.
+   Native depth-frame ranges are not used as color-frame depth priors.
+4. Check current geometry and palm anatomy. Freeze palm length references
+   from ten valid past warmup observations; no episode median is used.
+   Reject abrupt position jumps before filtering can conceal them.
+5. Filter each directly observed XYZ using causal One Euro (2 Hz minimum
+   cutoff, beta 0.5, 1 Hz derivative cutoff) and palm rotations using a
+   causal 3 Hz SO(3) filter with measured observation intervals.
+
+Only the four directly observed palm points `0,5,9,17` can produce an
+orientation. Missing/degenerate orientation is NaN and invalid; the offline
+centroid/identity fallback above is deliberately not used. Missing target
+points invalidate the position. Partial landmark output remains explicit;
+missing points are never copied forward with a fresh source timestamp.
+The default freshness limit is 250 ms, including processing time; stale
+results publish invalid flags. Position loss, anatomy/jump/skew failures and
+processing-stale failures reset tracking filters.
+
+For real cameras, call `verify_cameras(existing_manager)` after the rig has
+fresh frames and before starting control. It checks image shapes, recorded
+depth/color modes and actual factory calibration identity, catching changed
+Kinect device order. It cannot establish that camera mounts or the robot
+base have remained physically fixed. That registration must be valid for
+the session. Source classes and camera ownership are documented in
+[`viki/cameras`](../cameras/README.md); the coordinating runtime uses these
+public APIs. None of the immutable offline profiles or protected baselines
+is edited by the live estimator.
 
 ## Scene perception
 

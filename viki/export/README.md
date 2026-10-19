@@ -58,7 +58,7 @@ target transforms and must not become policy examples.
 
 ### What this version does not guarantee
 
-**Nothing is screened.** Replay is a stub, so trajectories are exported without
+**Screening is not required for bundles.** Trajectories can be exported without
 being replayed, and an episode need not be labelled or rated. The manifest says
 this in `screening`, and every episode's `meta.json` records what actually ran —
 `replay_run`, `replay_verdict`, `labelled`, `outcome_rated`. A consumer should
@@ -70,9 +70,17 @@ fatal to the rest.
 
 ## LeRobot dataset
 
-Eligibility is the stricter one: `retarget` and `replay` have run, the replay
-verdict is not `reject`, `outcome` is not `bad`, and the task string is
-non-empty. Frame schema and stub status are unchanged from before:
+Eligibility is the stricter one: `retarget` and measured hardware `replay` have
+run, the replay verdict is `pass`, arm and gripper measurements are present,
+the replay's SHA-256 matches the active plan, `outcome` is not `bad`, and the task string is
+non-empty. Dryrun and UR10e arm-only logs are excluded. Frame schema and partial status remain:
 `annotation.object_relative` is a shape-correct placeholder until
 `prepare.represent` produces a real object track — see
 `docs/object_centric_decision.md` for why it does not yet.
+
+This exporter is still not a complete robot policy dataset: `action` is the
+next attained state, videos are from the human recording, and `fps` does not
+resample the replay. Robot camera capture, clock alignment and a commanded
+action convention must be implemented before Diffusion Policy/RL training.
+The immutable control-rate replay logs preserve commands and observations for
+that work; trajectory bundles still contain the plan arrays.

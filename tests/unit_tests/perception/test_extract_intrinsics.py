@@ -31,13 +31,21 @@ def test_depth_K_empty_or_missing():
     assert _depth_K({"color": {"width": 1280}}) is None  # no fx
 
 
-def test_extract_episode_reads_nested_intrinsics(tmp_path):
+def test_extract_episode_reads_nested_intrinsics(tmp_path, monkeypatch):
     """End-to-end past the intrinsics read: synthetic raw/ with the nested form,
     two black frames -> no hand -> 0 records, but no KeyError and a rec.npz."""
     import cv2
 
     from viki.episode import new_episode, stage_done
     from viki.perception.extract import extract_episode
+    from types import SimpleNamespace
+
+    # This regression checks recording geometry, independent of detector
+    # defaults, optional inference runtimes and model downloads.
+    monkeypatch.setattr(
+        "viki.perception.extract.load_backend",
+        lambda *_args, **_kwargs: SimpleNamespace(detect=lambda *_a: None, close=lambda: None),
+    )
 
     ep = new_episode(tmp_path)
     raw = ep.raw_dir

@@ -15,9 +15,8 @@ consumer may legitimately want on their own: to replay on hardware, to inspect,
 to convert to some other dataset format, or simply to have a versioned
 deliverable.
 
-**Eligibility is deliberately weaker than the LeRobot path's.** Replay is a stub
-in this version, so requiring a replay verdict would make every episode
-ineligible and export nothing. An episode qualifies here when retarget has
+**Eligibility is deliberately weaker than the LeRobot path's.** A bundle can
+be exported before hardware replay. An episode qualifies here when retarget has
 produced a readable ``plan.h5``; whether it was replayed, labelled or screened
 is *recorded* per episode rather than used to reject it. The manifest states
 plainly what was and was not checked, so a consumer is never misled about the
@@ -40,7 +39,7 @@ import numpy as np
 from viki.contracts import Episode, cln_pose_keys
 from viki.episode import read_status, stage_done
 from viki.labeling import load_labels
-from viki.retarget.archive import load_archive
+from viki.retarget import load_archive
 
 logger = logging.getLogger(__name__)
 
@@ -131,6 +130,8 @@ def _episode_bundle(ep: Episode) -> tuple[dict, dict]:
         "screening": {
             "replay_run": bool(stage_done(ep, "replay")),
             "replay_verdict": status.get("stages", {}).get("replay", {}).get("verdict"),
+            "hardware": status.get("stages", {}).get("replay", {}).get("hardware", False),
+            "gripper_measured": status.get("stages", {}).get("replay", {}).get("gripper_measured", False),
             "labelled": bool(labels.task.strip()),
             "outcome_rated": labels.outcome != "unrated",
         },
@@ -220,7 +221,7 @@ def export_trajectories(
         "total_frames": int(sum(r["frames"] for r in index)),
         # Say plainly what this version does and does not guarantee.
         "screening": (
-            "NONE. Replay is a stub in this version, so trajectories are exported "
+            "NONE required for bundle eligibility. Planned trajectories can be exported "
             "without being replayed, screened or necessarily labelled. Each "
             "episode's meta.json records what was actually run."
         ),

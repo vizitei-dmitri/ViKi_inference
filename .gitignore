@@ -6,6 +6,7 @@ intrinsics.json
 *.zip
 depth/
 data/
+trajectories/
 debug/
 # Local agent scratch reports; release evidence lives in docs/
 docs/research_notes/

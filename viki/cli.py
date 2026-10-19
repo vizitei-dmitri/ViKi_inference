@@ -16,7 +16,7 @@ server calls — the CLI just parses args and prints results.
     viki prepare  <episode>
     viki geometry-fit <episode>        # clean cln -> anatomical A/B variants
     viki retarget <episode> --robot ur3
-    viki replay   <episode> [--driver dryrun|ur3]
+    viki replay   <episode> [--driver dryrun|ur10e --host IP --arm-only]
     viki label    <episode> --task "..." --outcome good
     viki export   --out data/datasets/pick <episode>...
     viki run      <episode>            # core pipeline; --scene-objects adds scene branch
@@ -312,9 +312,48 @@ def _cmd_object_relative(a) -> None:
 
 
 def _cmd_replay(a) -> None:
-    from viki.replay import replay_episode
+    import json
+    from viki.replay import URReplayOptions, check_replay, inspect_ur10e, replay_episode
 
-    print(replay_episode(_episode(a.episode), driver=a.driver, max_resolves=a.max_resolves))
+    options = URReplayOptions(
+        speed_scale=a.speed_scale, frequency=a.frequency, arm_only=a.arm_only,
+        max_velocity=a.max_velocity, max_acceleration=a.max_acceleration,
+        stop_after=a.stop_after,
+    )
+    if a.check or a.inspect:
+        report = check_replay(_episode(a.episode), options=options)
+        if a.inspect:
+            report["live"] = inspect_ur10e(a.host, start_q=report["start_q_rad"], tolerance=options.start_tolerance)
+        print(json.dumps(report, indent=2))
+    else:
+        print(replay_episode(
+            _episode(a.episode), driver=a.driver, max_resolves=a.max_resolves,
+            host=a.host, options=options if a.driver == "ur10e" else None,
+        ))
+
+
+def _cmd_ur_status(a) -> None:
+    import json
+    from viki.replay import inspect_ur10e
+
+    print(json.dumps(inspect_ur10e(a.host), indent=2))
+
+
+def _cmd_preview(a) -> None:
+    import json
+    from viki.replay import preview_mujoco
+
+    print(json.dumps(preview_mujoco(
+        _episode(a.episode), model_path=a.model, speed_scale=a.speed_scale,
+        mode=a.mode, gui=a.gui, video=a.video, video_fps=a.video_fps,
+        playback_speed=a.playback_speed,
+    ), indent=2))
+
+
+def _cmd_live(a) -> None:
+    from viki.live import run_live_cli
+
+    run_live_cli(a)
 
 
 def _cmd_label(a) -> None:
@@ -677,11 +716,59 @@ def _build_parser() -> argparse.ArgumentParser:
     por.add_argument("episode")
     por.set_defaults(func=_cmd_object_relative)
 
-    prp = sub.add_parser("replay", help="plan.h5 -> replay.h5 (stub stage)")
+    prp = sub.add_parser("replay", help="check or replay plan.h5 (UR10e arm-only / dryrun)")
     prp.add_argument("episode")
-    prp.add_argument("--driver", default="dryrun", choices=["dryrun", "ur3"])
+    prp.add_argument("--driver", default="dryrun", choices=["dryrun", "ur3", "ur10e"])
+    prp.add_argument("--host", default=None, help="robot IP from the teach pendant")
+    prp.add_argument("--arm-only", action="store_true", help="execute arm joints; leave gripper uncontrolled")
+    prp.add_argument("--speed-scale", type=float, default=0.1, help="trajectory time scale, 0 < scale <= 1")
+    prp.add_argument("--frequency", type=int, default=125, choices=[125, 250, 500])
+    prp.add_argument("--max-velocity", type=float, default=0.25, help="command bound in rad/s")
+    prp.add_argument("--max-acceleration", type=float, default=0.5, help="discrete command bound in rad/s²")
+    prp.add_argument("--stop-after", type=float, default=None, help="stop a hardware test after this many seconds; retain partial log")
+    checks = prp.add_mutually_exclusive_group()
+    checks.add_argument("--check", action="store_true", help="offline UR10e preflight; no connection or motion")
+    checks.add_argument("--inspect", action="store_true", help="preflight plus read-only live robot/start-pose check")
     prp.add_argument("--max-resolves", type=int, default=0)
     prp.set_defaults(func=_cmd_replay)
+
+    pus = sub.add_parser("ur-status", help="read UR10e identity and state without movement")
+    pus.add_argument("--host", required=True)
+    pus.set_defaults(func=_cmd_ur_status)
+
+    pmp = sub.add_parser("preview", help="offline UR10e MuJoCo preview; no robot connection")
+    pmp.add_argument("episode")
+    pmp.add_argument("--model", required=True, help="UR10e Menagerie scene.xml")
+    pmp.add_argument("--speed-scale", type=float, default=0.02)
+    pmp.add_argument("--mode", choices=["position", "kinematic"], default="position")
+    pmp.add_argument("--gui", action="store_true", help="interactive viewer, Space pauses/resumes")
+    pmp.add_argument("--video", default=None, help="save an MP4 preview")
+    pmp.add_argument("--video-fps", type=int, default=20)
+    pmp.add_argument("--playback-speed", type=float, default=1, help="viewer/video speed; does not change simulated dynamics")
+    pmp.set_defaults(func=_cmd_preview)
+
+    pli = sub.add_parser("live", help="causal cameras/recorded RGB-D -> hand pose -> MuJoCo/UR10e")
+    pli.add_argument("--reference", required=True, help="episode containing camera factory calibration/extrinsics")
+    pli.add_argument("--source", choices=["recorded", "cameras"], default="recorded")
+    pli.add_argument("--backend", choices=["mujoco", "ur10e"], default="mujoco")
+    pli.add_argument("--landmarks", choices=["all21", "arm7"], default="all21")
+    pli.add_argument("--perception-hz", type=float, default=15)
+    pli.add_argument("--control-hz", type=int, choices=[50, 125], default=50, help="125 is experimental; strict timing faults remain enabled")
+    pli.add_argument("--seconds", type=float, default=60)
+    pli.add_argument("--recorded-speed", type=float, default=1)
+    pli.add_argument("--scale", type=float, default=.25)
+    pli.add_argument("--orientation", action="store_true", help="also follow palm orientation (requires fresh palm landmarks)")
+    pli.add_argument("--host", default=None)
+    pli.add_argument("--execute", action="store_true", help="explicitly enable the physical UR10e backend; bind remains manual")
+    pli.add_argument("--mapping-json", default=None, help="confirmed rig->robot rotation and robot-frame floor")
+    pli.add_argument("--model", default="models/mujoco/ur10e/scene.xml")
+    pli.add_argument("--urdf", default=None)
+    pli.add_argument("--initial-q", type=float, nargs=6, default=None, help="simulation start only; physical robot never auto-homes")
+    pli.add_argument("--out", default="data/live_sessions")
+    pli.add_argument("--auto-bind", action="store_true", help="MuJoCo-only first bind for recorded/headless validation")
+    pli.add_argument("--gui", action="store_true", help="independent MuJoCo state viewer; Space binds/clutches")
+    pli.add_argument("--check", action="store_true", help="check saved calibration and nominal model without hardware connections")
+    pli.set_defaults(func=_cmd_live)
 
     pl = sub.add_parser("label", help="get/set episode labels")
     pl.add_argument("episode")

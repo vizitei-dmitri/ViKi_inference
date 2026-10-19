@@ -17,3 +17,6 @@ ENV/
 dist/
 build/
 *.log
+trajectories/
+data/
+models/

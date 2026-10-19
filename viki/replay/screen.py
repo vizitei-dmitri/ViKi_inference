@@ -1,78 +1,42 @@
-"""
-viki.replay.screen
-------------------
-Feasibility screening of a replayed trajectory (paper §3.8).
-
-Working: joint-limit violation from the robot model. STUB: singularity
-proximity, collision, and controller tracking-fault classification — these need
-the FK/Jacobian and a collision model, so for now they are not checked and the
-verdict falls through to ``pass`` (or ``dry-run`` when the residual is unmeasured).
-"""
+"""Measured joint/tracking checks (§3.8); no collision or singularity verdict."""
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
+import logging
 
 import numpy as np
+
+from viki.retarget import robot_joint_limits
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class Verdict:
-    verdict: str  # pass | reject | dry-run
-    cause: str  # "" | joint_limit | singularity | collision | tracking_fault
+    verdict: str  # pass | reject | dry-run | arm-only | test-stop
+    cause: str
 
 
-def _joint_limits(robot_description: str):
-    """Physical arm-angle limits in plan joint order, or unavailable."""
-    try:
-        from viki.retarget.robots import normalize_robot
-
-        robot = normalize_robot(robot_description)
-        if robot.position_limits is not None:
-            limits = np.asarray(robot.position_limits, dtype=np.float64)
-            return limits[:, 0], limits[:, 1]
-        from viki.retarget.run import _load_robot_description
-
-        model = _load_robot_description(robot.description).model
-        lower = []
-        upper = []
-        for name in robot.joint_names:
-            joint_id = int(model.getJointId(name))
-            if int(model.nqs[joint_id]) != 1:
-                lower.append(-np.inf)
-                upper.append(np.inf)
-                continue
-            q_index = int(model.idx_qs[joint_id])
-            lower.append(float(model.lowerPositionLimit[q_index]))
-            upper.append(float(model.upperPositionLimit[q_index]))
-        return np.asarray(lower), np.asarray(upper)
-    except Exception as exc:  # pragma: no cover - depends on optional model cache
-        logger.warning("joint-limit screen skipped (%s): %s", robot_description, exc)
-        return None, None
-
-
-def screen(
-    q_attained: np.ndarray,
-    controller_residual: np.ndarray,
-    robot_description: str,
-    *,
-    residual_threshold: float = 0.05,
-) -> Verdict:
+def screen(q_attained, controller_residual, robot_description: str, *, residual_threshold: float = 0.05) -> Verdict:
     q = np.asarray(q_attained, dtype=np.float64)
-
-    q_min, q_max = _joint_limits(robot_description)
-    if q_min is not None and q.shape[1] == q_min.shape[0]:
-        if np.any(q < q_min - 1e-6) or np.any(q > q_max + 1e-6):
+    residual = np.asarray(controller_residual, dtype=np.float64)
+    if q.ndim != 2 or not len(q) or not np.isfinite(q).all() or residual.shape != (len(q),):
+        return Verdict("reject", "invalid_telemetry")
+    limits_available = False
+    try:
+        lower, upper = robot_joint_limits(robot_description)
+        limits_available = q.shape[1] == len(lower)
+        if limits_available and (np.any(q < lower - 1e-6) or np.any(q > upper + 1e-6)):
             return Verdict("reject", "joint_limit")
-
-    resid = np.asarray(controller_residual, dtype=np.float64)
-    if not np.isfinite(resid).any():
+    except Exception as exc:
+        logger.warning("joint limits unavailable (%s): %s", robot_description, exc)
+    if np.isnan(residual).all():
         return Verdict("dry-run", "")
-    if np.nanmax(resid) > residual_threshold:
+    if not np.isfinite(residual).all() or np.any(residual < 0):
+        return Verdict("reject", "invalid_telemetry")
+    if np.max(residual) > residual_threshold:
         return Verdict("reject", "tracking_fault")
-
-    # singularity / collision checks: not implemented (paper §3.8)
+    if not limits_available:
+        return Verdict("reject", "joint_limits_unavailable")
     return Verdict("pass", "")

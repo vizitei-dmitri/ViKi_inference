@@ -37,11 +37,12 @@ and not everything advertised below is finished.**
   There is **no ground-truth reference** in this setup, so all reported
   millimetre figures are self-consistency and tracking-error measures, not
   absolute accuracy.
-- **Replay on hardware is a stub.** Nothing exported here has been validated on a
-  physical robot. Do not run a ViKi trajectory on real hardware without your own
-  review and safety checks.
-- **Exported bundles are unscreened.** Because replay is a stub, episodes are
-  exported without a replay verdict. Every manifest says so explicitly.
+- **UR10e arm-only replay is implemented, with hardware validation pending.**
+  It checks plans and the stationary start pose, streams through RTDE and logs
+  measured arm states. Hardware grippers and robot-execution camera capture
+  remain unfinished. See the [first-run guide](docs/ur10e_execution.md).
+- **Bundles do not require screening.** Per-episode provenance records replay
+  status. Dryrun and arm-only replay do not qualify for LeRobot policy training.
 - **Interfaces, defaults and config keys are still moving** between commits.
 - **The repository ships code only.** Robot URDFs, model weights, calibration and
   recordings are *not* included — see
@@ -154,12 +155,40 @@ produced on first use; some of it you have to go and get.
 | object-relative (hand/TCP tracks) | [`viki/object_centric.py`](viki/object_centric.py) | post-IK diagnostic sidecar; cube-aware IK is a separate geometric pilot |
 | prepare (fuse + smooth) | [`viki/prepare`](viki/prepare/README.md) | works — accuracy tuning ongoing |
 | retarget (IK) | [`viki/retarget`](viki/retarget/README.md) | cube-aware default with readiness checks; geometric pilot only, no simulated grasp verdict |
-| replay (hardware validation) | [`viki/replay`](viki/replay/README.md) | **stub** — no hardware validation |
+| replay (hardware validation) | [`viki/replay`](viki/replay/README.md) | UR10e arm-only RTDE implemented; physical validation pending |
+| live human following | [`viki/live`](viki/live/README.md) | causal 21-point hand pose → relative online IK → MuJoCo / UR10e; hardware validation pending |
 | export → trajectory bundle | [`viki/export`](viki/export/README.md) | works (numpy only) |
 | export → LeRobot dataset | [`viki/export`](viki/export/README.md) | partial — needs optional deps; object-relative annotation is a placeholder |
 
 See [`viki/README.md`](viki/README.md) for the full package map and
 cross-cutting rules.
+
+### Live human following
+
+The **Live** tab starts observations, shows the hand/palm and robot in separate
+3-D views, and provides explicit Bind, Clutch and Stop. Its first mode follows
+the human; no learned policy is required. The default executor runs at 50 Hz
+and causal MediaPipe perception at 15 Hz. Only the six arm joints are actuated.
+
+```bash
+docker compose build live
+docker compose run --rm live-web          # UI on http://localhost:8000
+# Or validate recorded input in MuJoCo without opening cameras or the robot:
+docker compose run --rm live live \
+  --reference data/datasets/40mm-pnp/2026-10-06_11-15-00 \
+  --source recorded --backend mujoco --recorded-speed 0.5 \
+  --seconds 12 --auto-bind --gui
+```
+
+Run one web service on port 8000. See the [live instructions](docs/live_human_run.md)
+for live cameras, coordinate registration and UR10e bring-up. The independent
+MuJoCo display can render slowly without changing the execution frequency.
+
+The **Online review** tab combines source point clouds, logged online hand
+estimates and measured MuJoCo arm motion on one timeline. It preserves inference
+delay, invalid observations and binding losses. See the
+[recorded online review guide](docs/2026-10-19-online-review.md); this view is
+separate from Viewer's saved offline `plan.h5` overlay.
 
 ### Trajectory export
 
@@ -178,8 +207,8 @@ frames and provenance. No torch, no parquet, no `lerobot`.
 <out>/episodes/<id>/meta.json         that episode's provenance
 ```
 
-The manifest's `screening` field states plainly that nothing was replayed or
-vetted. Details in [`viki/export/README.md`](viki/export/README.md).
+The manifest's `screening` field states that replay is not required and records
+each episode's status. Details in [`viki/export/README.md`](viki/export/README.md).
 
 ---
 

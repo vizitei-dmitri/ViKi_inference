@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ["RobotConfig", "ROBOT_CONFIGS", "ROBOT_ALIASES", "normalize_robot"]
+__all__ = ["RobotConfig", "ROBOT_CONFIGS", "ROBOT_ALIASES", "normalize_robot", "robot_joint_limits"]
 
 
 @dataclass(frozen=True)
@@ -73,3 +73,25 @@ def normalize_robot(robot: str) -> RobotConfig:
             f"unknown robot {robot!r}; known: {', '.join(sorted(ROBOT_CONFIGS))}"
         )
     return ROBOT_CONFIGS[key]
+
+
+def robot_joint_limits(robot: str):
+    """Physical joint-angle limits in the registered arm order."""
+    import numpy as np
+
+    config = normalize_robot(robot)
+    if config.position_limits is not None:
+        limits = np.asarray(config.position_limits, dtype=np.float64)
+        return limits[:, 0], limits[:, 1]
+    from viki.retarget.run import _load_robot_description
+
+    model = _load_robot_description(config.description).model
+    bounds = []
+    for name in config.joint_names:
+        joint = int(model.getJointId(name))
+        if int(model.nqs[joint]) != 1:
+            raise ValueError(f"physical angle limits unavailable for {name}")
+        index = int(model.idx_qs[joint])
+        bounds.append((model.lowerPositionLimit[index], model.upperPositionLimit[index]))
+    limits = np.asarray(bounds, dtype=np.float64)
+    return limits[:, 0], limits[:, 1]

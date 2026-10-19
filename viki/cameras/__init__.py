@@ -12,6 +12,8 @@ imports elsewhere.
 from viki.cameras.base import CameraBackend  # noqa: F401
 from viki.cameras.manager import CameraManager  # noqa: F401
 from viki.cameras.sync import MultiCameraSync  # noqa: F401
+from viki.cameras.hw_sync import HardwareSyncError
+from viki.cameras.live import CameraFrameSource, RecordedFrameSource, realsense_color_pixel_to_ray
 from viki.contracts import CameraIntrinsics, Frame, SyncedFrameGroup  # noqa: F401
 
 __all__ = [
@@ -21,4 +23,8 @@ __all__ = [
     "CameraIntrinsics",
     "Frame",
     "SyncedFrameGroup",
+    "CameraFrameSource",
+    "HardwareSyncError",
+    "RecordedFrameSource",
+    "realsense_color_pixel_to_ray",
 ]

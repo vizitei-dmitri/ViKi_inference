@@ -12,13 +12,14 @@ segment       perception/   raw/        ->  intermediates/segmentation/  instanc
 object        perception/   segmentation -> object_models.npz  rigid core/shell + pose/confidence
 retarget      retarget/     cln.npz     ->  plan.h5      pinch/palm target -> adapter -> gripper TCP -> robot joints
 object-rel    object_centric.py  object_models.npz + cln.npz + plan.h5 -> intermediates/object_relative.npz
-replay        replay/       plan.h5     ->  replay.h5    proprioception attained on hardware   [stub]
+replay        replay/       plan.h5     ->  replay.h5    UR10e arm-only RTDE + execution logs
 label         labeling.py   -> meta.json["labels"]       task string / phase segments / outcome
 export        export/       episodes/*  ->  datasets/<name>/   trajectory bundle; LeRobot  [partial]
 
 calibration/  intrinsics + extrinsics (board -> world), a side input to perception
 render/       depth colourise, MJPEG, 3-D matplotlib views — no FastAPI, no hardware
 server/       transport only: FastAPI over the offline stages + camera preview
+live/         causal camera/recorded frames -> hand pose -> online IK -> isolated MuJoCo/UR10e owner
 cli.py        `viki record|extract|scene|prepare|retarget|object-relative|replay|label|export|run`
 ```
 
@@ -38,7 +39,9 @@ cli.py        `viki record|extract|scene|prepare|retarget|object-relative|replay
 - A stage imports `viki.contracts` and the public `__init__` of a neighbour — never a neighbour's internal module.
 - `render/` depends only on `contracts` + numpy/cv2/matplotlib.
 - `server/` depends on everything; nothing depends on `server/`.
-- There is **no live pipeline**: record scenes, then extract/prepare/retarget offline.
+- Offline stages remain episode-based. The independent `live/` session branch
+  uses a causal perception profile and explicit relative binding, never future
+  interpolation or a precomputed `plan.h5`. See [live/README.md](live/README.md).
 
 Modules tagged `[stub]` are contract-complete but not implemented; each cites the
 thesis section it must satisfy (`paper/thesis/ch3_methodology.tex`).

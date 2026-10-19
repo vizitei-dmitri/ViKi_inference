@@ -3,8 +3,8 @@ viki.replay.driver
 ------------------
 Execution of a synthesised joint trajectory on the manipulator.
 
-``RobotDriver`` is the abstraction. ``UR3Driver`` is a STUB — real execution
-needs ``ur-rtde`` and the physical UR3 (paper §3.8). ``DryRunDriver`` runs no
+``RobotDriver`` is the abstraction. ``UR3Driver`` remains a STUB (paper §3.8).
+The separate UR10e driver implements arm-only RTDE execution. ``DryRunDriver`` runs no
 hardware: it reports the planned trajectory back as if it were attained, with a
 NaN controller residual, so the rest of the pipeline (screening, export) can be
 exercised end to end.
@@ -13,9 +13,11 @@ exercised end to end.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
+
+from viki.replay.plan import validate_commands
 
 
 @dataclass
@@ -25,6 +27,7 @@ class ProprioLog:
     q_attained: np.ndarray  # (T, nq)
     gripper_attained: np.ndarray  # (T,) float, normalised opening
     controller_residual: np.ndarray  # (T,) float, NaN if not measured
+    telemetry: dict[str, np.ndarray] = field(default_factory=dict)
 
 
 class RobotDriver(ABC):
@@ -47,10 +50,7 @@ class DryRunDriver(RobotDriver):
     def execute(self, q_traj: np.ndarray, gripper: np.ndarray, dt: float) -> ProprioLog:
         q = np.asarray(q_traj, dtype=np.float64)
         g = np.asarray(gripper, dtype=np.float64)
-        if g.shape != (len(q),) or not np.isfinite(g).all():
-            raise ValueError("gripper opening must be a finite (T,) trajectory")
-        if np.any(g < 0.0) or np.any(g > 1.0):
-            raise ValueError("gripper opening must stay in [0, 1]")
+        validate_commands(q, g, dt)
         return ProprioLog(
             q_attained=q.copy(),
             gripper_attained=g.copy(),
@@ -77,10 +77,14 @@ _DRIVERS: dict[str, type[RobotDriver]] = {"dryrun": DryRunDriver, "ur3": UR3Driv
 
 
 def load_driver(name: str = "dryrun", **kwargs) -> RobotDriver:
+    if name == "ur10e":
+        from viki.replay.ur import UR10eDriver
+
+        return UR10eDriver(**kwargs)
     try:
         cls = _DRIVERS[name]
     except KeyError:
         raise ValueError(
-            f"unknown driver {name!r}; known: {', '.join(sorted(_DRIVERS))}"
+            f"unknown driver {name!r}; known: {', '.join(sorted(_DRIVERS))}, ur10e"
         ) from None
     return cls(**kwargs)

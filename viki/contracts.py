@@ -15,7 +15,7 @@ Artifact chain (see ``Episode``)::
         -> rec.npz          per-camera hand landmark trajectories  (perception.extract)
         -> cln.npz          fused + smoothed wrist trajectory + EE pose  (prepare.run)
         -> plan.h5          synthesised robot joint trajectory  (retarget.run)
-        -> replay.h5        proprioception attained on hardware  (replay.run)  [stub]
+        -> replay.h5        proprioception attained on hardware  (replay.run)
     datasets/<name>/        LeRobot dataset  (export.run)  [stub]
 """
 
@@ -161,6 +161,89 @@ class DepthProjector(Protocol):
     def project_color_to_depth(
         self, u: float, v: float, z: float
     ) -> tuple[float, float] | None: ...
+
+
+@dataclass
+class LiveHandEstimate:
+    """Causal hand estimate in rig axes; source time never advances on a hold."""
+
+    sequence: int
+    source_time_us: int
+    generated_time_us: int
+    points: np.ndarray
+    observed: np.ndarray
+    quality: np.ndarray
+    position: np.ndarray
+    rotation: np.ndarray
+    position_valid: bool
+    orientation_valid: bool
+    calibration_id: str
+    reason: str = ""
+    opening: float = float("nan")
+    camera_timestamps: dict = field(default_factory=dict)
+
+
+@dataclass
+class HumanTarget:
+    """Latest human pose, not a robot command; all host times are monotonic µs."""
+
+    sequence: int
+    source_time_us: int
+    valid_until_us: int
+    position: np.ndarray
+    rotation: np.ndarray
+    position_valid: bool
+    orientation_valid: bool
+    calibration_id: str
+
+
+@dataclass(frozen=True)
+class LiveControlOptions:
+    """Per-session arm-only settings, independent of frozen offline profiles."""
+
+    frequency: int = 50
+    max_velocity: float = 0.25
+    max_acceleration: float = 0.5
+    tracking_tolerance: float = 0.05
+    max_lateness: float = 0.04
+    input_ttl_s: float = 0.25
+    scale: float = 0.25
+    max_displacement_m: float = 0.15
+    orientation: bool = False
+    rotation_robot_rig: tuple = ((1., 0., 0.), (0., 1., 0.), (0., 0., 1.))
+    floor_normal: tuple = (0., 0., 1.)
+    floor_offset_m: float = 0.
+    collision_distance_m: float = 0.02
+    initial_q: tuple = (0., -1.2, 1.6, -1.9, -1.2, 0.)
+    host: str | None = None
+    hardware_enabled: bool = False
+    mapping_confirmed: bool = False
+    model_path: str = "models/mujoco/ur10e/scene.xml"
+    urdf_path: str | None = None
+
+    def validate(self) -> None:
+        if self.frequency not in (50, 125):
+            raise ValueError("live executor supports 50 Hz or experimental 125 Hz")
+        for key in ("max_velocity", "max_acceleration", "tracking_tolerance",
+                    "max_lateness", "input_ttl_s", "scale", "max_displacement_m"):
+            value = getattr(self, key)
+            if not np.isfinite(value) or value <= 0:
+                raise ValueError(f"{key} must be finite and positive")
+        if self.max_velocity > 0.25 or self.max_acceleration > 0.5 or self.scale > 1:
+            raise ValueError("live bring-up bounds: velocity<=0.25, acceleration<=0.5, scale<=1")
+        rotation = np.asarray(self.rotation_robot_rig, dtype=float)
+        if (rotation.shape != (3, 3) or not np.isfinite(rotation).all()
+                or not np.allclose(rotation.T @ rotation, np.eye(3), atol=1e-6)
+                or not np.isclose(np.linalg.det(rotation), 1, atol=1e-6)):
+            raise ValueError("rotation_robot_rig must be a proper SO(3) rotation")
+        normal = np.asarray(self.floor_normal, dtype=float)
+        if normal.shape != (3,) or not np.isfinite(normal).all() or np.linalg.norm(normal) < 1e-9:
+            raise ValueError("floor_normal must be finite and nonzero")
+        if not np.isfinite(self.floor_offset_m) or not np.isfinite(self.collision_distance_m) or self.collision_distance_m <= 0:
+            raise ValueError("invalid model floor/collision settings")
+        initial = np.asarray(self.initial_q, dtype=float)
+        if initial.shape != (6,) or not np.isfinite(initial).all():
+            raise ValueError("initial_q must contain six finite joint angles")
 
 
 # ──────────────────────────── calibration ───────────────────────────────
@@ -627,4 +710,11 @@ REPLAY_KEYS: tuple[str, ...] = (
     "resolve_attempts",
     "robot",
     "dt",
+    "source_dt",  # source plan time step before hardware slowdown
+    "driver",
+    "hardware",
+    "completed",
+    "gripper_measured",  # false for dryrun and arm-only execution
+    "plan_sha256",
+    "execution_log",  # immutable full control-rate log, relative to episode
 )

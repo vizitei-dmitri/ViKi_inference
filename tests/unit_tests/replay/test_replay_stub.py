@@ -37,6 +37,12 @@ def test_screen_flags_tracking_fault():
     assert v.verdict == "reject" and v.cause == "tracking_fault"
 
 
+def test_screen_rejects_missing_joint_limits_and_partial_measurements():
+    q = np.zeros((2, 6))
+    assert screen(q, np.zeros(2), "unknown").cause == "joint_limits_unavailable"
+    assert screen(q, np.array([0.0, np.nan]), "ur10e").cause == "invalid_telemetry"
+
+
 def test_screen_uses_physical_ur_limits_for_continuous_pinocchio_joint():
     q = np.zeros((2, 6))
     q[1, -1] = 2.0 * np.pi + 0.01

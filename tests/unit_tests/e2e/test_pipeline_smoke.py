@@ -102,6 +102,6 @@ def test_pipeline_smoke(tmp_path):
     traj = np.load(Path(out) / "episodes" / ep.id / "trajectory.npz", allow_pickle=False)
     assert traj["q"].shape == (n_frames, 6)
 
-    # export, LeRobot: no lerobot in the test image -> clean install error
-    with pytest.raises(RuntimeError, match="lerobot"):
+    # Echoed dry-run states must never qualify as measured policy examples.
+    with pytest.raises(RuntimeError, match="no eligible episodes"):
         export_dataset([str(ep.root)], str(tmp_path / "ds"), fps=15)

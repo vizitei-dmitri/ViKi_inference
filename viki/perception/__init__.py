@@ -35,6 +35,7 @@ from viki.perception.scene import (  # noqa: F401
     scene_perception_episode,
     segment_episode,
 )
+from viki.perception.live import LiveCameraGeometry, LiveHandEstimator, load_live_geometry
 
 __all__ = [
     "LM",
@@ -55,4 +56,7 @@ __all__ = [
     "build_object_models_episode",
     "scene_perception_episode",
     "load_backend",
+    "LiveCameraGeometry",
+    "LiveHandEstimator",
+    "load_live_geometry",
 ]

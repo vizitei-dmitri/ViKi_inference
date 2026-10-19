@@ -31,13 +31,19 @@ def test_load_projector_swallows_errors(tmp_path, monkeypatch):
     assert ex._load_projector(tmp_path, "kinect_0", {}) is None
 
 
-def test_extract_warns_on_identity_fallback(tmp_path, caplog):
+def test_extract_warns_on_identity_fallback(tmp_path, caplog, monkeypatch):
     import json
 
     import cv2
     import numpy as np
 
     from viki.episode import new_episode
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "viki.perception.extract.load_backend",
+        lambda *_args, **_kwargs: SimpleNamespace(detect=lambda *_a: None, close=lambda: None),
+    )
 
     ep = new_episode(tmp_path)
     raw = ep.raw_dir
