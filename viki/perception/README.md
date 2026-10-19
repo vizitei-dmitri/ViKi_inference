@@ -94,6 +94,27 @@ The default freshness limit is 250 ms, including processing time; stale
 results publish invalid flags. Position loss, anatomy/jump/skew failures and
 processing-stale failures reset tracking filters.
 
+Explicit experimental settings use profile
+`live-human-sdk-rays-causal-tunable-v2`. Public `CausalLandmarkFilter` is the
+same causal XYZ filter used by the estimator. `LIVE_FILTER_MIN_CUTOFF_HZ`
+and `LIVE_FILTER_BETA` default to 2 and 0.5; constructor overrides are also
+accepted. Optional `LIVE_FILTER_QUALITY_POWER` (default 0) scales filter alpha
+by clipped geometric quality raised to that power. This weight is not a
+calibrated noise covariance, and experiments found extra lag; it is disabled
+by default. Changing parameters does not alter the canonical V1 recipe.
+
+`LIVE_ORIENTATION_RECOVERY` defaults to false. The experimental mode confirms
+three coherent fresh palm rotations after an aged reference or large jump,
+including recovery after position loss. Missing orientation interrupts that
+confirmation. It does not issue bind requests or resume robot movement.
+V1's historical rotation behavior is retained when the option is off.
+
+`capture_raw=True` adds pre-filter current-frame `raw_points` to the estimate
+and hand log; it is opt-in and never reads a future frame. The capture/filter
+benchmark scripts use those points to compare candidates without rerunning
+MediaPipe. `scripts/benchmark_live_bones.py` is a separate fixed-length
+projection prototype, not the live estimator or a full anatomical joint fit.
+
 For real cameras, call `verify_cameras(existing_manager)` after the rig has
 fresh frames and before starting control. It checks image shapes, recorded
 depth/color modes and actual factory calibration identity, catching changed

@@ -13,7 +13,7 @@ import h5py
 import numpy as np
 import pytest
 
-from viki.contracts import HumanTarget, LiveControlOptions
+from viki.contracts import HumanTarget, LiveControlOptions, LiveIKTuning
 from viki.replay import LiveController
 from viki.replay.live import _LiveCore, _LiveLog, _MujocoBackend, _TargetGate, _URBackend, _worker
 
@@ -60,6 +60,34 @@ def test_arrival_and_duplicate_sequence_never_renew_source_expiry():
     assert gate.target.valid_until_us == 1_250_000
     assert gate.accept(replace(original, source_time_us=1_200_000), 1_200_000)[0] is False
     assert gate.reason(1_250_000) == "stale_human_input"
+
+
+def test_feedforward_is_cleared_on_loss_and_manual_rebind():
+    class VelocityIK(FakeIK):
+        tuning = LiveIKTuning(feedforward_gain=1.)
+
+        def step(self, measured, q, velocity, position, rotation, dt, **kwargs):
+            self.feedforward = kwargs["target_velocity"]
+            return super().step(measured, q, velocity, position, rotation, dt)
+
+    options = LiveControlOptions()
+    ik = VelocityIK(options)
+    core = _LiveCore(options, ik, np.zeros(6))
+    q = np.zeros(6)
+    core.inputs.accept(target(), 1_000_000)
+    core.bind(q, np.zeros(6), 1_000_000)
+    q = core.step(q, 1_000_000)["q"]
+    core.inputs.accept(target(2, source=1_100_000, position=(.01, 0, 0)), 1_100_000)
+    q = core.step(q, 1_100_000)["q"]
+    assert ik.feedforward[0] > 0
+    q = core.step(q, 1_360_000)["q"]
+    assert core.binding is None and core.target_velocity.position is None
+    for _ in range(20):
+        q = core.step(q, 1_370_000)["q"]
+    core.inputs.accept(target(3, source=1_400_000, position=(.1, 0, 0)), 1_400_000)
+    core.bind(q, np.zeros(6), 1_400_000)
+    core.step(q, 1_400_000)
+    np.testing.assert_array_equal(ik.feedforward, 0)
 
 
 def test_bind_uses_current_fk_and_following_remains_relative(core):

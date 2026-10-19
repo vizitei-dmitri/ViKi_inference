@@ -118,11 +118,16 @@ def load_live_geometry(episode: Episode | str | Path) -> tuple[dict[str, LiveCam
     return contexts, digest.hexdigest()
 
 
-class _OneEuro:
+class CausalLandmarkFilter:
     """Independent landmark states; missing observations are never propagated."""
 
-    def __init__(self, min_cutoff: float = 2., beta: float = .5):
+    def __init__(self, min_cutoff: float = 2., beta: float = .5, *, quality_power: float = 0.):
+        if not np.isfinite(min_cutoff) or min_cutoff <= 0 or not np.isfinite(beta) or beta < 0:
+            raise ValueError("One Euro requires positive cutoff and nonnegative beta")
         self.min_cutoff, self.beta = min_cutoff, beta
+        if not np.isfinite(quality_power) or not 0 <= quality_power <= 2:
+            raise ValueError("quality_power must be in [0, 2]")
+        self.quality_power = quality_power
         self.reset()
 
     def reset(self):
@@ -135,7 +140,10 @@ class _OneEuro:
     def _alpha(cutoff, dt):
         return 1. / (1. + 1. / (2. * np.pi * cutoff * dt))
 
-    def update(self, points, observed, now_us):
+    def update(self, points, observed, now_us, quality=None):
+        quality = np.ones(21) if quality is None else np.asarray(quality, dtype=float)
+        if quality.shape != (21,) or not np.isfinite(quality[observed]).all():
+            raise ValueError("observed landmark qualities must be finite")
         result = np.full((21, 3), np.nan)
         for lm in np.flatnonzero(observed):
             dt = (now_us - self.times[lm]) / 1e6
@@ -148,6 +156,7 @@ class _OneEuro:
                 self.derivative[lm] = a * derivative + (1 - a) * self.derivative[lm]
                 cutoff = self.min_cutoff + self.beta * np.linalg.norm(self.derivative[lm])
                 a = self._alpha(cutoff, dt)
+                a *= np.clip(quality[lm], .1, 1.)**self.quality_power
                 filtered = a * points[lm] + (1 - a) * self.values[lm]
             result[lm] = filtered
             self.raw[lm], self.values[lm], self.times[lm] = points[lm], filtered, now_us
@@ -161,7 +170,10 @@ class LiveHandEstimator:
                  *, calibration_id: str, landmark_mode: str = "all21",
                  max_age_s: float = .25, max_skew_s: float = .02,
                  target_anchor: str = "pinch_center", hand: str = "right",
-                 warmup_frames: int = 10, clock_us=None, model_sha256: str = ""):
+                 warmup_frames: int = 10, clock_us=None, model_sha256: str = "",
+                 min_cutoff_hz: float | None = None, beta: float | None = None,
+                 capture_raw: bool = False, orientation_recovery: bool | None = None,
+                 quality_power: float | None = None):
         if landmark_mode not in ("all21", "arm7"):
             raise ValueError("landmark_mode must be all21 or arm7")
         if target_anchor not in ("pinch_center", "wrist"):
@@ -182,7 +194,21 @@ class LiveHandEstimator:
         self._last_native = {}
         self._last_source_us = 0
         self._sequence = 0
-        self._filter = _OneEuro()
+        from viki.config import load
+
+        cfg = load()
+        min_cutoff_hz = cfg.LIVE_FILTER_MIN_CUTOFF_HZ if min_cutoff_hz is None else min_cutoff_hz
+        beta = cfg.LIVE_FILTER_BETA if beta is None else beta
+        quality_power = cfg.LIVE_FILTER_QUALITY_POWER if quality_power is None else quality_power
+        self._filter = CausalLandmarkFilter(min_cutoff_hz, beta, quality_power=quality_power)
+        self.capture_raw, self._raw_points = bool(capture_raw), None
+        self.orientation_recovery = (cfg.LIVE_ORIENTATION_RECOVERY if orientation_recovery is None
+                                     else bool(orientation_recovery))
+        self._rotation_candidate = None
+        self._rotation_candidate_count = 0
+        self._rotation_candidate_time_us = 0
+        self._orientation_seen = False
+        self._orientation_reacquiring = False
         self._rotation = None
         self._rotation_time_us = 0
         self._last_wrist = None
@@ -196,17 +222,21 @@ class LiveHandEstimator:
                                "reproj_inlier_mrad": 25., "depth_lambda": 0.,
                                "geometry_cameras": [], "quality_detector_score": False})
         self.manifest = {
-            "profile": LIVE_PROFILE, "landmark_mode": landmark_mode,
+            "profile": (LIVE_PROFILE if min_cutoff_hz == 2. and beta == .5 and quality_power == 0. and not self.orientation_recovery
+                        else "live-human-sdk-rays-causal-tunable-v2"), "landmark_mode": landmark_mode,
             "landmark_ids": list(self.landmarks), "target_anchor": target_anchor,
             "calibration_id": calibration_id, "model_sha256": model_sha256,
             "camera_factory_sha256": {d: g.factory_hash for d, g in geometry.items()},
             "detector": "persistent per-camera VIDEO", "single_hand_scene_required": True,
             "optics": "factory SDK color rays -> synthetic K pixels -> zero distortion",
             "depth_prior": "disabled: native depth z is not color-frame z",
-            "filter": {"kind": "causal One Euro", "min_cutoff_hz": 2., "beta": .5,
-                       "derivative_cutoff_hz": 1., "orientation_cutoff_hz": 3.},
+            "filter": {"kind": "causal One Euro", "min_cutoff_hz": min_cutoff_hz, "beta": beta,
+                       "derivative_cutoff_hz": 1., "orientation_cutoff_hz": 3.,
+                       "quality_power": quality_power, "quality_policy": "alpha *= clip(geometric quality, .1, 1)^power; experimental"},
             "triangulation": self._tri.as_dict(), "warmup_frames": warmup_frames,
             "max_age_s": max_age_s, "max_skew_s": max_skew_s,
+            "capture_raw": self.capture_raw,
+            "orientation_recovery": {"enabled": self.orientation_recovery, "confirmation_frames": 3},
         }
 
     @classmethod
@@ -261,9 +291,14 @@ class LiveHandEstimator:
                     raise RuntimeError(f"camera {dev} RealSense factory calibration changed")
 
     def _clear_tracking(self):
+        if self.orientation_recovery and self._orientation_seen:
+            self._orientation_reacquiring = True
         self._filter.reset()
         self._rotation = None
         self._rotation_time_us = 0
+        self._rotation_candidate = None
+        self._rotation_candidate_count = 0
+        self._rotation_candidate_time_us = 0
 
     def _result(self, source_time, points, observed, quality, reason="", *, valid=False,
                 rotation=None, orientation_valid=False, camera_timestamps=None):
@@ -279,6 +314,7 @@ class LiveHandEstimator:
                      if rotation is None else rotation.copy()), position_valid=bool(valid),
             orientation_valid=bool(orientation_valid), calibration_id=self.calibration_id,
             reason=reason, opening=opening, camera_timestamps=camera_timestamps or {},
+            raw_points=(self._raw_points.copy() if self.capture_raw and self._raw_points is not None else None),
         )
 
     def process(self, group: SyncedFrameGroup) -> LiveHandEstimate | None:
@@ -299,6 +335,7 @@ class LiveHandEstimator:
             return None
         self._last_native, self._last_source_us = native, source_time
         points, observed, quality = np.full((21, 3), np.nan), np.zeros(21, bool), np.zeros(21)
+        self._raw_points = points
         skew = max(int(f.host_timestamp_us) for f in group.frames.values()) - source_time
         if skew > self._max_skew_us:
             self._clear_tracking()
@@ -370,18 +407,39 @@ class LiveHandEstimator:
                 self._clear_tracking()
                 return self._result(source_time, points, observed, quality, "position_jump", camera_timestamps=native)
         self._last_wrist, self._last_wrist_time_us = points[0].copy(), source_time
-        filtered = self._filter.update(points, observed, source_time)
+        filtered = self._filter.update(points, observed, source_time, quality=quality)
         if rotation is not None:
-            if self._rotation is not None:
-                delta = Rotation.from_matrix(self._rotation.T @ rotation).as_rotvec()
-                if np.linalg.norm(delta) > 1.2:
+            if self._rotation is not None or self._orientation_reacquiring:
+                delta = (Rotation.from_matrix(self._rotation.T @ rotation).as_rotvec()
+                         if self._rotation is not None else np.zeros(3))
+                dt = (source_time - self._rotation_time_us) / 1e6 if self._rotation is not None else float("inf")
+                if self.orientation_recovery and (dt > self._max_age_us/1e6 or np.linalg.norm(delta) > 1.2):
+                    coherent = False
+                    if self._rotation_candidate is not None:
+                        gap = (source_time-self._rotation_candidate_time_us)/1e6
+                        angle = np.linalg.norm(Rotation.from_matrix(self._rotation_candidate.T @ rotation).as_rotvec())
+                        coherent = 0 < gap <= self._max_age_us/1e6 and angle <= .25+4*gap
+                    self._rotation_candidate_count = self._rotation_candidate_count+1 if coherent else 1
+                    self._rotation_candidate, self._rotation_candidate_time_us = rotation.copy(), source_time
+                    if self._rotation_candidate_count < 3:
+                        rotation = None
+                    else:
+                        self._rotation_candidate = None
+                        self._rotation_candidate_count = 0
+                        self._orientation_reacquiring = False
+                elif np.linalg.norm(delta) > 1.2:
                     rotation = None
                 else:
-                    dt = (source_time - self._rotation_time_us) / 1e6
-                    alpha = _OneEuro._alpha(3., dt)
+                    self._rotation_candidate = None
+                    self._rotation_candidate_count = 0
+                    alpha = CausalLandmarkFilter._alpha(3., dt)
                     rotation = self._rotation @ Rotation.from_rotvec(alpha * delta).as_matrix()
             if rotation is not None:
                 self._rotation, self._rotation_time_us = rotation, source_time
+                self._orientation_seen = True
+        elif self.orientation_recovery:
+            self._rotation_candidate = None
+            self._rotation_candidate_count = 0
         return self._result(source_time, filtered, observed, quality, valid=True, rotation=rotation,
                             orientation_valid=rotation is not None, camera_timestamps=native)
 

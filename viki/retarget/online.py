@@ -225,6 +225,11 @@ class OnlineRetargeter:
             tuning = LiveIKTuning(position_gain=cfg.LIVE_IK_POSITION_GAIN,
                 orientation_gain=cfg.LIVE_IK_ORIENTATION_GAIN, damping=cfg.LIVE_IK_DAMPING,
                 acceleration_weight=cfg.LIVE_IK_ACCELERATION_WEIGHT)
+            tuning = LiveIKTuning(**{**asdict(tuning),
+                "feedforward_gain": cfg.LIVE_IK_FEEDFORWARD_GAIN,
+                "feedforward_cutoff_hz": cfg.LIVE_IK_FEEDFORWARD_CUTOFF_HZ,
+                "feedforward_max_speed": cfg.LIVE_IK_FEEDFORWARD_MAX_SPEED,
+                "feedforward_hold_s": cfg.LIVE_IK_FEEDFORWARD_HOLD_S})
         tuning.validate()
         self.tuning = tuning
         self.options = options
@@ -392,7 +397,8 @@ class OnlineRetargeter:
             "min_jacobian_singular_value": float(singular_value),
         }
 
-    def step(self, measured_q, command_q, previous_velocity, position, rotation, dt):
+    def step(self, measured_q, command_q, previous_velocity, position, rotation, dt, *,
+             target_velocity=None):
         """Compute one bounded command using the current measured configuration."""
         command, previous, period, command_margins = self._history(command_q, previous_velocity, dt)
         measured = _vector(measured_q, 6, "measured_q")
@@ -414,6 +420,12 @@ class OnlineRetargeter:
         weighted_j = np.vstack((jp, 0.15 * jr))
         desired = np.concatenate((self.tuning.position_gain * (target_p - p),
                                   0.15 * self.tuning.orientation_gain * error_r))
+        feedforward = np.zeros(3)
+        if target_velocity is not None:
+            feedforward = _vector(target_velocity, 3, "target_velocity")
+            if np.linalg.norm(feedforward) > self.tuning.feedforward_max_speed+1e-9:
+                raise ValueError("target_velocity exceeds configured Cartesian cap")
+            desired[:3] += self.tuning.feedforward_gain*feedforward
         desired -= weighted_j @ (command - measured) / period
         # Damping limits singularity amplification; acceleration regularisation
         # refers to local accepted history, never to the registered home pose.
@@ -433,8 +445,10 @@ class OnlineRetargeter:
         margins = self._segment(command, q_next, command_margins)
         margins = {key: min(margins[key], lag_margins[key]) for key in margins}
         smallest = float(np.linalg.svd(weighted_j, compute_uv=False)[-1])
-        return self._result(q_next, velocity, previous, period, margins,
-                            target_p, target_r, smallest)
+        result = self._result(q_next, velocity, previous, period, margins,
+                              target_p, target_r, smallest)
+        result["feedforward_velocity"] = self.tuning.feedforward_gain*feedforward
+        return result
 
     def brake(self, command_q, previous_velocity, dt):
         """A controlled bounded stop, with no hand-target extrapolation."""

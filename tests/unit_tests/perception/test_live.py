@@ -4,9 +4,10 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from scipy.spatial.transform import Rotation
 
 from viki.contracts import Frame, HandDetection, SyncedFrameGroup
-from viki.perception.live import LiveCameraGeometry, LiveHandEstimator, load_live_geometry
+from viki.perception.live import CausalLandmarkFilter, LiveCameraGeometry, LiveHandEstimator, load_live_geometry
 from viki.perception.triangulate import _Cam
 
 
@@ -80,6 +81,142 @@ def test_exact_factory_rays_are_corrected_once_and_all21_are_observed():
     np.testing.assert_allclose(result.rotation.T @ result.rotation, np.eye(3), atol=1e-6)
     assert result.calibration_id == "fixed-calibration"
     assert all(d.calls == 1 for d in detectors.values())
+
+
+def test_raw_capture_keeps_pre_filter_geometry_and_default_profile():
+    points = skeleton()
+    est, _, clock = estimator(points)
+    est.capture_raw = True
+    first = est.process(group(clock[0]))
+    saved = first.raw_points.copy()
+    points[:, 0] += .01
+    clock[0] += 66_667
+    current = est.process(group(clock[0]))
+    np.testing.assert_allclose(current.raw_points, points, atol=1e-6)
+    assert np.linalg.norm(current.points[0]-current.raw_points[0]) > .001
+    np.testing.assert_array_equal(first.raw_points, saved)
+    assert est.manifest["profile"] == "live-human-sdk-rays-causal-v1"
+
+
+def test_filter_prefix_is_causal_and_loss_reset_cannot_keep_old_velocity():
+    raw = np.tile(skeleton(), (6, 1, 1))
+    raw[:, :, 0] += np.arange(6)[:, None]*.005
+    a, b = CausalLandmarkFilter(1., 10.), CausalLandmarkFilter(1., 10.)
+    for i in range(4):
+        np.testing.assert_array_equal(a.update(raw[i], np.ones(21, bool), 1_000_000+i*66_667),
+                                      b.update(raw[i], np.ones(21, bool), 1_000_000+i*66_667))
+    a.update(raw[-1]+10, np.ones(21, bool), 1_400_000)
+    b.reset()
+    reacquired = b.update(raw[-1], np.ones(21, bool), 1_400_000)
+    np.testing.assert_array_equal(reacquired, raw[-1])
+
+
+@pytest.mark.parametrize("recovery", [False, True])
+def test_large_orientation_reacquires_only_after_three_coherent_fresh_frames(recovery):
+    points = skeleton()
+    est, detectors, clock = estimator(points)
+    est.orientation_recovery = recovery
+    assert est.process(group(clock[0])).orientation_valid
+    # Only orientation is lost: wrist/pinch observations remain valid.
+    for detector in detectors.values():
+        detector.missing.add(17)
+    clock[0] += 300_000
+    assert not est.process(group(clock[0])).orientation_valid
+    for detector in detectors.values():
+        detector.missing.clear()
+    wrist = points[0].copy()
+    points[:] = (points-wrist) @ Rotation.from_rotvec([1.8, 0., 0.]).as_matrix().T+wrist
+    outcomes = []
+    for _ in range(3):
+        clock[0] += 66_667
+        outcomes.append(est.process(group(clock[0])).orientation_valid)
+    assert outcomes == ([False, False, True] if recovery else [False, False, False])
+
+
+def test_quality_weight_reduces_response_to_uncertain_observation_without_filling_missing():
+    points = skeleton()
+    a, b = CausalLandmarkFilter(2., .5), CausalLandmarkFilter(2., .5, quality_power=1.)
+    observed = np.ones(21, dtype=bool)
+    a.update(points, observed, 1_000_000)
+    b.update(points, observed, 1_000_000)
+    moved = points+np.array([.01, 0., 0.])
+    observed[20] = False
+    normal = a.update(moved, observed, 1_066_667, quality=np.full(21, .2))
+    uncertain = b.update(moved, observed, 1_066_667, quality=np.full(21, .2))
+    assert 0 < uncertain[0, 0]-points[0, 0] < normal[0, 0]-points[0, 0]
+    assert np.isnan(uncertain[20]).all()
+
+
+def test_orientation_position_loss_requires_confirmation_in_recovery_mode():
+    est, detectors, clock = estimator()
+    est.orientation_recovery = True
+    assert est.process(group(clock[0])).orientation_valid
+    for detector in detectors.values():
+        detector.missing.add(4)
+    clock[0] += 66_667
+    assert not est.process(group(clock[0])).position_valid
+    for detector in detectors.values():
+        detector.missing.clear()
+    states = []
+    for _ in range(3):
+        clock[0] += 66_667
+        states.append(est.process(group(clock[0])).orientation_valid)
+    assert states == [False, False, True]
+
+
+def test_degenerate_palm_is_invalid_before_filtering():
+    points = skeleton()
+    est, _, clock = estimator(points)
+    assert est.process(group(clock[0])).orientation_valid
+    points[5] = [0, .04, 1]
+    points[17] = [0, .10, 1]
+    clock[0] += 66_667
+    result = est.process(group(clock[0]))
+    assert result.reason == "degenerate_palm" and not result.orientation_valid
+    assert not result.position_valid and np.isnan(result.rotation).all()
+
+
+def test_missing_palm_interrupts_orientation_recovery_confirmation():
+    points = skeleton()
+    est, detectors, clock = estimator(points)
+    est.orientation_recovery = True
+    assert est.process(group(clock[0])).orientation_valid
+    wrist = points[0].copy()
+    points[:] = (points-wrist) @ Rotation.from_rotvec([1.8, 0, 0]).as_matrix().T+wrist
+    clock[0] += 66_667
+    assert not est.process(group(clock[0])).orientation_valid
+    for detector in detectors.values():
+        detector.missing.add(17)
+    clock[0] += 66_667
+    assert not est.process(group(clock[0])).orientation_valid
+    for detector in detectors.values():
+        detector.missing.clear()
+    recovered = []
+    for _ in range(3):
+        clock[0] += 66_667
+        recovered.append(est.process(group(clock[0])).orientation_valid)
+    assert recovered == [False, False, True]
+
+
+def test_bone_projection_calibrates_from_prefix_and_preserves_missingness():
+    from scripts.benchmark_live_bones import project_stream
+
+    points = np.zeros((21, 3))
+    for finger, root in enumerate((1, 5, 9, 13, 17)):
+        for joint in range(4):
+            points[root+joint] = [(finger-2)*.015, .04+joint*.02, 0.]
+    raw = np.tile(points, (20, 1, 1))
+    observed = np.ones((20, 21), dtype=bool)
+    observed[12, 8] = False
+    raw[12, 8] = np.nan
+    valid = np.ones(20, dtype=bool)
+    original = project_stream(raw, raw.copy(), observed, valid)
+    future = raw.copy()
+    future[15:, 4, 1] += .1
+    changed = project_stream(future, future.copy(), observed, valid)
+    np.testing.assert_allclose(original[0][:15], changed[0][:15], equal_nan=True)
+    assert not original[1][:9].any() and original[1][9]
+    assert not original[1][12] and np.isnan(original[0][12]).all()
 
 
 def test_duplicate_stale_out_of_order_frames_never_call_detector_or_refresh_source():

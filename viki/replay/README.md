@@ -103,6 +103,12 @@ marked failed. Virtual time is deterministic; this measures model-space TCP
 tracking and does not validate wall-clock deadlines or physical robot accuracy.
 The comparison does not change live defaults or protected offline baselines.
 
+`--feedforward` adds weights 0.25 / 0.5 / 1 to each position gain;
+`--feedforward-grid` sweeps cutoff 2 / 5 / 10 Hz, speed cap 0.05 / 0.1 / 0.15 m/s
+and hold 0.08 / 0.12 / 0.2 s at weight 1. Velocity is estimated from the same
+frozen source/availability timestamps as the runtime, not servo-step target
+differences. Traces also retain the unweighted bounded target velocity.
+
 ## Remaining work
 
 For causal human following use `viki live`, documented in

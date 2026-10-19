@@ -16,6 +16,8 @@ def main():
     parser.add_argument("--out", type=Path, required=True, help="new output directory outside source session")
     parser.add_argument("--gains", type=float, nargs="+", default=[6., 10., 15.])
     parser.add_argument("--regularization", action="store_true", help="also sweep damping and acceleration weights at each gain")
+    parser.add_argument("--feedforward", action="store_true", help="also compare causal bounded target-velocity feed-forward")
+    parser.add_argument("--feedforward-grid", action="store_true", help="sweep feed-forward cutoff, cap and hold at weight 1")
     parser.add_argument("--scenario", choices=["recorded", "step", "ramp"], default="recorded",
                         help="recorded targets, or synthetic +/-20mm X targets with the session's model and limits")
     args = parser.parse_args()
@@ -23,6 +25,17 @@ def main():
     variants = []
     for gain in args.gains:
         variants.append((f"gain={gain:g}", replace(base, position_gain=gain)))
+        if args.feedforward:
+            for weight in (.25, .5, 1.):
+                variants.append((f"gain={gain:g},ff={weight:g}",
+                                 replace(base, position_gain=gain, feedforward_gain=weight)))
+        if args.feedforward_grid:
+            for cutoff in (2., 5., 10.):
+                for speed in (.05, .1, .15):
+                    for hold in (.08, .12, .2):
+                        variants.append((f"gain={gain:g},ff=1,cutoff={cutoff:g},cap={speed:g},hold={hold:g}",
+                            replace(base, position_gain=gain, feedforward_gain=1.,
+                                feedforward_cutoff_hz=cutoff, feedforward_max_speed=speed, feedforward_hold_s=hold)))
         if args.regularization:
             for damping in (1e-5, 1e-3):
                 variants.append((f"gain={gain:g},damping={damping:g}",

@@ -16,7 +16,7 @@ import h5py
 import numpy as np
 
 from viki.contracts import LiveControlOptions, LiveIKTuning
-from viki.retarget import OnlineRetargeter
+from viki.retarget import CausalTargetVelocity, OnlineRetargeter
 from .live import _MujocoBackend
 
 
@@ -177,18 +177,24 @@ def _simulate(options, inputs, tuning, expected_model, *, backend_factory=_Mujoc
         initial = backend.read()
         command, velocity = initial["q"].copy(), np.zeros(6)
         _, fixed_rotation = ik.pose(initial["q"])
+        estimator = CausalTargetVelocity(tuning)
         period = 1 / options.frequency
         # Initialize native/model caches outside component timing, as live does.
         ik.step(command, command, velocity, ik.pose(command)[0], fixed_rotation, period)
-        for target in inputs["target_position"]:
+        for i, target in enumerate(inputs["target_position"]):
             measured = backend.read()
             position, _ = ik.pose(measured["q"])
             started = time.perf_counter()
-            step = ik.step(measured["q"], command, velocity, target, fixed_rotation, period)
+            kwargs = {}
+            if tuning.feedforward_gain:
+                kwargs["target_velocity"] = estimator.update(target,
+                    int(inputs["source_time_us"][i]), int(inputs["host_monotonic_us"][i]))
+            step = ik.step(measured["q"], command, velocity, target, fixed_rotation, period, **kwargs)
             timings.append((time.perf_counter()-started)*1000)
             backend.command(step["q"])
             rows.append((measured["q"].copy(), measured["qd"].copy(), step["q"].copy(),
-                         step["velocity"].copy(), position.copy(), target.copy()))
+                         step["velocity"].copy(), position.copy(), target.copy(),
+                         np.asarray(kwargs.get("target_velocity", np.zeros(3))).copy()))
             margin_rows.append(step["margins"])
             command, velocity = step["q"], step["velocity"]
             backend.advance(period)
@@ -196,7 +202,7 @@ def _simulate(options, inputs, tuning, expected_model, *, backend_factory=_Mujoc
         error = f"{type(exc).__name__}: {exc}"
     finally:
         backend.close()
-    keys = ("q_observed", "qd_observed", "q_commanded", "velocity_commanded", "tcp_position", "target_position")
+    keys = ("q_observed", "qd_observed", "q_commanded", "velocity_commanded", "tcp_position", "target_position", "target_velocity")
     trace = {key: np.array([row[i] for row in rows]).reshape((-1, 6 if i < 4 else 3))
              for i, key in enumerate(keys)}
     qd = trace["velocity_commanded"]

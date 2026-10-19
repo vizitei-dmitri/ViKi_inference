@@ -22,7 +22,7 @@ import uuid
 
 import numpy as np
 
-from viki.contracts import HumanTarget, LiveControlOptions
+from viki.contracts import HumanTarget, LiveControlOptions, LiveIKTuning
 
 
 def _json_safe(value):
@@ -112,8 +112,11 @@ class _LiveCore:
     """Small state machine, separate from transport and physical backends."""
 
     def __init__(self, options, retargeter, q):
+        from viki.retarget import CausalTargetVelocity
+
         self.options = options
         self.ik = retargeter
+        self.target_velocity = CausalTargetVelocity(getattr(retargeter, "tuning", LiveIKTuning()))
         self.inputs = _TargetGate(options)
         self.state = "unbound"
         self.reason = "operator_bind_required"
@@ -135,6 +138,7 @@ class _LiveCore:
         target = self.inputs.target
         self.command = np.asarray(q).copy()
         self.velocity = np.zeros(6)
+        self.target_velocity.reset()
         self.binding = {
             "human_position": target.position.copy(),
             "human_rotation": target.rotation.copy(),
@@ -145,6 +149,7 @@ class _LiveCore:
         self.state, self.reason = "active", ""
 
     def clutch(self, reason="operator_clutch"):
+        self.target_velocity.reset()
         self.binding = None
         if self.state in ("active", "braking"):
             self.state, self.reason = "braking", reason
@@ -171,8 +176,12 @@ class _LiveCore:
                         relative = target.rotation @ self.binding["human_rotation"].T
                         rotation = rotation_map @ relative @ rotation_map.T @ rotation
                     try:
+                        kwargs = {}
+                        if self.target_velocity.tuning.feedforward_gain:
+                            kwargs["target_velocity"] = self.target_velocity.update(
+                                self.binding["robot_position"]+delta, target.source_time_us, now_us)
                         result = self.ik.step(measured, self.command, self.velocity,
-                            self.binding["robot_position"] + delta, rotation, dt)
+                            self.binding["robot_position"] + delta, rotation, dt, **kwargs)
                     except (ValueError, RuntimeError) as exc:
                         self.clutch("ik_rejected: " + str(exc))
                     else:
@@ -421,7 +430,7 @@ class _LiveLog:
 
     VECTORS = {"q_observed": 6, "qd_observed": 6, "q_commanded": 6, "velocity_commanded": 6,
                "human_position": 3, "target_position": 3, "tcp_position": 3,
-               "tcp_pose_controller": 6, "tcp_rotation": 9}
+               "tcp_pose_controller": 6, "tcp_rotation": 9, "feedforward_velocity": 3}
     SCALARS = ("host_monotonic_us", "source_time_us", "sequence", "controller_timestamp_s",
                "residual_rad", "solver_ms", "cycle_compute_ms", "safety_mode", "command_accepted",
                "command_host_monotonic_us", "command_completed_monotonic_us")
@@ -714,6 +723,8 @@ def _worker(backend_name, options, directory, targets, controls, snapshots, stop
                 "tcp_position": tcp_position, "tcp_rotation": np.asarray(tcp_rotation).reshape(9),
                 "human_position": target.position.copy() if target else np.full(3, np.nan),
                 "target_position": target_position, "residual_rad": residual, "solver_ms": solver_ms,
+                "feedforward_velocity": (core.last_result.get("feedforward_velocity", np.zeros(3))
+                                         if command_accepted and core.state == "active" else np.zeros(3)),
                 "cycle_compute_ms": compute_ms, "safety_mode": measured["safety_mode"],
                 "state": core.state, "cause": core.reason, "margins": result.get("margins", {}),
                 "command_accepted": command_accepted,

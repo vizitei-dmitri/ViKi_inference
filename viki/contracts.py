@@ -181,6 +181,7 @@ class LiveHandEstimate:
     reason: str = ""
     opening: float = float("nan")
     camera_timestamps: dict = field(default_factory=dict)
+    raw_points: np.ndarray | None = None  # opt-in current-frame geometry for filter experiments
 
 
 @dataclass
@@ -205,12 +206,23 @@ class LiveIKTuning:
     orientation_gain: float = 4.0  # s^-1
     damping: float = 1e-4
     acceleration_weight: float = 1e-3
+    feedforward_gain: float = 0.0
+    feedforward_cutoff_hz: float = 5.0
+    feedforward_max_speed: float = 0.1  # robot-base m/s
+    feedforward_hold_s: float = 0.12  # availability age; source TTL remains independent
 
     def validate(self) -> None:
         for name in ("position_gain", "orientation_gain", "damping", "acceleration_weight"):
             value = getattr(self, name)
             if not np.isfinite(value) or value < 0 or (name != "acceleration_weight" and value == 0):
                 raise ValueError(f"{name} must be finite and {'nonnegative' if name == 'acceleration_weight' else 'positive'}")
+        if not np.isfinite(self.feedforward_gain) or not 0 <= self.feedforward_gain <= 1:
+            raise ValueError("feedforward_gain must be in [0, 1]")
+        for name in ("feedforward_cutoff_hz", "feedforward_max_speed", "feedforward_hold_s"):
+            if not np.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
+                raise ValueError(f"{name} must be finite and positive")
+        if self.feedforward_max_speed > .15 or self.feedforward_hold_s > .25:
+            raise ValueError("feedforward max speed <=0.15 m/s and hold <=0.25 s required")
 
 
 @dataclass(frozen=True)

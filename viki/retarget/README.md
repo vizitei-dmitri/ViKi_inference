@@ -211,6 +211,16 @@ Changing them does not change velocity/acceleration, floor, collision or
 tracking admission bounds. Restart the session after configuration changes.
 The live objective is separate from all offline `RETARGET_*` weights.
 
+Optional feed-forward uses `LIVE_IK_FEEDFORWARD_GAIN` (default 0),
+`LIVE_IK_FEEDFORWARD_CUTOFF_HZ` (5), `LIVE_IK_FEEDFORWARD_MAX_SPEED`
+(0.1 m/s in robot axes) and `LIVE_IK_FEEDFORWARD_HOLD_S` (0.12 s).
+`CausalTargetVelocity` differentiates distinct source observations, filters
+and caps the vector norm, then fades it on held input. It never renews source
+TTL. `OnlineRetargeter.step(..., target_velocity=...)` adds the weighted
+velocity inside the constrained QP; this does not bypass existing bounds.
+The live core resets this estimate on bind/clutch/loss. Applied feed-forward
+is recorded in `execution.h5` only for accepted active commands.
+
 Use the simulation-only comparison in
 [replay/README.md](../replay/README.md#online-ik-experiments) before selecting
 new values. In position following, the bound orientation is still held by
